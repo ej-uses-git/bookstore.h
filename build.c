@@ -1,0 +1,204 @@
+#define BOOKSTORE_IMPLEMENTATION
+
+#include "./bookstore/build.h"
+#include "./bookstore/arena.h"
+#include "./bookstore/basic.h"
+#include "./bookstore/flag.h"
+#include "./bookstore/string.h"
+#include "./bookstore/system.h"
+
+#define BIN_DIR         "bin"
+#define BOOKSTORE_DIR   "bookstore"
+#define TEST_OUTPUT_DIR BIN_DIR "/test"
+#define TEST_INPUT_DIR  "test"
+
+bool build_tests(Arena *arena, FilePaths dependencies, Command compile_flags);
+bool run_tests(Arena *arena);
+
+void usage(FILE *stream) {
+    // clang-format off
+    fprintf(stream,
+            "Usage: " SV_FMT " [options] <commands..>\n"
+            "\n"
+
+            "Commands:\n"
+            PAD_NAME"clean\n"
+            PAD_DESCRIPTION"Clean up the build output directory.\n"
+            "\n"
+            PAD_NAME"build\n"
+            PAD_DESCRIPTION"Build all outputs.\n"
+            "\n"
+
+            // clang-format on
+            "Options:\n",
+            SV_ARG(FLAG_GET_PROGRAM_NAME()));
+    FLAG_PRINT_OPTIONS(stream);
+}
+
+int main(int argc, const char **argv) {
+    Arena *arena = arena_new(MiB(1));
+
+    FLAG_INIT(arena);
+
+    bool *help =
+        FLAG_BOOL("-help", .alias = "h",
+                  .description = "Print this help information and exit.");
+    bool *debug = FLAG_BOOL("-debug", .alias = "d",
+                            .description = "Print debug information.");
+
+    if (!FLAG_PARSE_MAIN(arena, argc, argv, .parse_all = true)) {
+        usage(stderr);
+        FLAG_PRINT_ERROR(stderr);
+        return 1;
+    }
+
+    if (*debug) {
+        min_log_level = LOG_DEBUG;
+    }
+
+    FilePaths dependencies = file_paths_new(arena, 256);
+    list_directory(arena, BOOKSTORE_DIR, &dependencies);
+
+    Lifetime lt = lifetime_begin(arena);
+    SELF_REBUILD_DEPENDENCIES(lt.arena, argc, argv, dependencies);
+    lifetime_end(lt);
+
+    if (*help) {
+        usage(stdout);
+        return 0;
+    }
+
+    Command compile_flags = command_new(arena, 32);
+    COMMAND_COMPILE_FLAGS_TXT(arena, &compile_flags);
+
+    Args args = FLAG_REST_ARGS();
+
+    if (!args.count) {
+        usage(stderr);
+        fprintf(stderr, "ERROR: missing commands\n");
+        return 1;
+    }
+
+    if (args_index_of(args, sv_from_cstr("clean")) >= 0) {
+        if (!delete_directory_recursively(arena, BIN_DIR)) return 1;
+    }
+    if (args_index_of(args, sv_from_cstr("build")) >= 0) {
+        if (!build_tests(arena, dependencies, compile_flags)) return 1;
+    }
+    if (args_index_of(args, sv_from_cstr("test")) >= 0) {
+        if (!run_tests(arena)) return 1;
+    }
+
+    return 0;
+}
+
+typedef struct {
+    ProcessList *procs;
+    FilePaths dependencies;
+    Command compile_flags;
+    i32 concurrency;
+} BuildTestsVisitData;
+
+bool build_tests_visit(WalkEntry entry) {
+    DEFER_SETUP(bool, true);
+
+    Lifetime lt = lifetime_begin(entry.arena);
+
+    if (entry.level > 1) {
+        *entry.action = WALK_STOP;
+        DEFER_RETURN(true);
+    }
+
+    if (entry.level == 1) {
+        BuildTestsVisitData *data = entry.user_data;
+
+        StringView output_dir = sv_from_cstr(TEST_OUTPUT_DIR);
+
+        FilePaths dependencies =
+            file_paths_new(lt.arena, data->dependencies.count + 1);
+        file_paths_push(&dependencies, entry.path);
+        file_paths_append_other(&dependencies, data->dependencies);
+
+        StringView basename = get_basename(sv_from_cstr(entry.path));
+        sv_strip_suffix(&basename, sv_from_cstr(".c"));
+
+        StringBuilder output =
+            sb_new(lt.arena, basename.count + output_dir.count + 2);
+        sb_appendf(&output, SV_FMT "/" SV_FMT, SV_ARG(output_dir),
+                   SV_ARG(basename));
+        sb_push_null(&output);
+
+        i8 needs_rebuild = build_needs_rebuild(output.items, dependencies);
+        if (needs_rebuild < 0) DEFER_RETURN(false);
+        if (!needs_rebuild) {
+            log_debug("Nothing to do for '%s'", output.items);
+            DEFER_RETURN(true);
+        }
+
+        Command command = command_new(lt.arena, 32);
+
+        COMMAND_CC(&command);
+        command_append_other(&command, data->compile_flags);
+
+        // TODO: do this only in debug mode?
+        COMMAND_CC_DEBUG_INFO(&command);
+        COMMAND_CC_ADDRESS_SANITIZE(&command);
+
+        COMMAND_APPEND(&command, "-DBOOKSTORE_IMPLEMENTATION");
+        COMMAND_CC_OUTPUT(lt.arena, &command, output.items);
+        COMMAND_CC_INPUTS(&command, entry.path);
+
+        if (!COMMAND_RUN(lt.arena, &command, .async = data->procs,
+                         .concurrency = data->concurrency))
+            DEFER_RETURN(false);
+    }
+
+    DEFER_LABEL({ lifetime_end(lt); });
+}
+
+bool build_tests(Arena *arena, FilePaths dependencies, Command compile_flags) {
+    i32 concurrency = 64;
+    ProcessList procs = process_list_new(arena, concurrency);
+
+    BuildTestsVisitData data = {.procs = &procs,
+                                .dependencies = dependencies,
+                                .compile_flags = compile_flags,
+                                .concurrency = concurrency};
+
+    if (!make_directory_recursively(arena, TEST_OUTPUT_DIR)) return false;
+
+    if (!WALK_DIRECTORY(arena, TEST_INPUT_DIR, build_tests_visit,
+                        .user_data = &data)) {
+        return false;
+    }
+
+    if (!process_list_wait(procs)) return false;
+
+    return true;
+}
+
+bool run_tests_visit(WalkEntry entry) {
+    DEFER_SETUP(bool, true);
+
+    Lifetime lt = lifetime_begin(entry.arena);
+
+    if (entry.level > 1) {
+        *entry.action = WALK_SKIP;
+        DEFER_RETURN(true);
+    }
+
+    if (entry.level == 1) {
+        if (entry.type != FILE_TYPE_REGULAR) DEFER_RETURN(true);
+
+        Command command = command_new(lt.arena, 1);
+        command_push(&command, entry.path);
+
+        if (!COMMAND_RUN(lt.arena, &command)) DEFER_RETURN(false);
+    }
+
+    DEFER_LABEL({ lifetime_end(lt); });
+}
+
+bool run_tests(Arena *arena) {
+    return WALK_DIRECTORY(arena, TEST_OUTPUT_DIR, run_tests_visit);
+}
