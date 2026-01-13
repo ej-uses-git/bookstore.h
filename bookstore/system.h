@@ -64,7 +64,10 @@ typedef struct {
 
 typedef struct {
     void *user_data;
-    bool depth_first;
+    // Whether to visit entries in post-order traversal; first visiting the
+    // deepest nodes and then back up, instead of starting with the shallowest
+    // nodes.
+    bool post_order;
 } WalkDirectoryOpt;
 
 typedef const char *FilePath;
