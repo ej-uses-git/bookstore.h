@@ -162,21 +162,21 @@ TEST_MAIN({
                 args = ARGS_FROM_LIST(sv_from_cstr("-" FLAG),
                                       sv_printf(arena, U64_FMT, value));
                 EXPECT_PARSE(arena, args);
-                EXPECT_EQ(flag, value, "%llu");
+                EXPECT_EQ(flag, value, U64_FMT);
             });
 
             IT("should parse from an equals sign", {
                 args = ARGS_FROM_LIST(
                     sv_printf(arena, "-" FLAG "=" U64_FMT, value));
                 EXPECT_PARSE(arena, args);
-                EXPECT_EQ(flag, value, "%llu");
+                EXPECT_EQ(flag, value, U64_FMT);
             });
 
             IT("should parse a trimmed value", {
                 args = ARGS_FROM_LIST(
                     sv_printf(arena, "-" FLAG "=  " U64_FMT, value));
                 EXPECT_PARSE(arena, args);
-                EXPECT_EQ(flag, value, "%llu");
+                EXPECT_EQ(flag, value, U64_FMT);
             });
         });
 
