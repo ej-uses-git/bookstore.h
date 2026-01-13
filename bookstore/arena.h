@@ -26,14 +26,22 @@ void *arena_alloc(Arena *self, i32 size);
 // Clear an arena, freeing the capacity such that more memory can be allocated.
 // Note: every `arena_alloc` onwards will overwrite previously allocated memory.
 void arena_clear(Arena *self);
+// Clone a C-string (NUL-terminated list of characters), using the arena to
+// allocate the underlying memory.
 char *arena_clone_cstr(Arena *self, const char *cstr);
+// Format `fmt` like `printf`, returning a C-string (NUL-terminated list of
+// characters) with the result. Uses the arena to allocate the underlying
+// memory.
 char *arena_sprintf(Arena *arena, const char *fmt, ...) PRINTF_FORMAT(2, 3);
 
 // A temporary lifetime, associated with an arena allocator, which provides the
 // ability to allocate memory for a temporary while and then reset the arena
 // back to the state it was at the beginning of the lifetime.
 typedef struct {
+    // The arena allocator associated with this lifetime.
     Arena *arena;
+    // The position in the arena where this lifetime begins, and to which the
+    // arena should be reset once the lifetime ends.
     i32 start;
 } Lifetime;
 
@@ -44,8 +52,6 @@ Lifetime lifetime_begin(Arena *arena);
 void lifetime_end(Lifetime self);
 
 #ifdef BOOKSTORE_IMPLEMENTATION
-
-// TODO: null assertions
 
 Arena *arena_new(i32 capacity) {
     Arena *self = (Arena *)MALLOC(sizeof(Arena) + capacity);
