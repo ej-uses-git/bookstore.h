@@ -369,6 +369,8 @@ StringView command_render(Arena *arena, Command command) {
 
     StringBuilder sb = sb_new(arena, capacity);
     for (i32 i = 0; i < arg_count; i++) {
+        log_debug("(" I32_FMT ") sb.count = " I32_FMT, i, sb.count);
+
         if (i > 0) sb_push(&sb, ' ');
 
         StringView sv = svs[i];
