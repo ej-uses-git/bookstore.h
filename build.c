@@ -120,8 +120,8 @@ bool build_tests_visit(WalkEntry entry) {
 
         StringBuilder output =
             sb_new(lt.arena, basename.count + output_dir.count + 2);
-        sb_appendf(&output, SV_FMT "/" SV_FMT, SV_ARG(output_dir),
-                   SV_ARG(basename));
+        sb_appendf(&output, SV_FMT SYSTEM_PATH_DELIMITER_STRING SV_FMT,
+                   SV_ARG(output_dir), SV_ARG(basename));
         sb_push_null(&output);
 
         i8 needs_rebuild = build_needs_rebuild(output.items, dependencies);
@@ -141,7 +141,7 @@ bool build_tests_visit(WalkEntry entry) {
         COMMAND_CC_DEBUG_INFO(&command);
         COMMAND_CC_ADDRESS_SANITIZE(&command);
 
-        COMMAND_APPEND(&command, "-DBOOKSTORE_IMPLEMENTATION");
+        COMMAND_CC_DEFINE(lt.arena, &command, "BOOKSTORE_IMPLEMENTATION");
         COMMAND_CC_OUTPUT(lt.arena, &command, output.items);
         COMMAND_CC_INPUTS(&command, entry.path);
 

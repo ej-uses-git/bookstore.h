@@ -60,6 +60,26 @@
 #endif // defined(_MSC_VER) && !defined(__clang__)
 #endif // COMMAND_CC_ADDRESS_SANITIZE
 
+#ifndef COMMAND_CC_DEFINE
+#if defined(_MSC_VER) && !defined(__clang__)
+#define COMMAND_CC_DEFINE(arena, command, macro)                               \
+    COMMAND_APPEND(command, arena_sprintf(arena, "/D%s", macro))
+#else
+#define COMMAND_CC_DEFINE(arena, command, macro)                               \
+    COMMAND_APPEND(command, arena_sprintf(arena, "-D%s", macro))
+#endif // defined(_MSC_VER) && !defined(__clang__)
+#endif // COMMAND_CC_DEFINE
+
+#ifndef COMMAND_CC_DEFINE_VALUE
+#if defined(_MSC_VER) && !defined(__clang__)
+#define COMMAND_CC_DEFINE_VALUE(arena, command, macro, value)                  \
+    COMMAND_APPEND(command, arena_sprintf(arena, "/D%s=%s", macro, value))
+#else
+#define COMMAND_CC_DEFINE_VALUE(arena, command, macro, value)                  \
+    COMMAND_APPEND(command, arena_sprintf(arena, "-D%s=%s", macro, value))
+#endif // defined(_MSC_VER) && !defined(__clang__)
+#endif // COMMAND_CC_DEFINE_VALUE
+
 #ifndef COMMAND_CC_OUTPUT
 #if defined(_MSC_VER) && !defined(__clang__)
 #define COMMAND_CC_OUTPUT(arena, command, output_path)                         \
