@@ -34,18 +34,9 @@ TEST_MAIN({
     AFTER_EACH({ lifetime_end(lt); });
 
     DESCRIBE("tree_insert", {
-        IT_FAIL("should fail if over insertion limit", {
+        IT_FAIL("should fail if over capacity", {
             Tree t = tree_new(lt.arena, 0);
             tree_insert(lt.arena, &t, random_next());
-            UNREACHABLE("should have failed earlier");
-        });
-
-        IT_FAIL("should fail if over insertion limit including removals", {
-            Tree t = tree_new(lt.arena, 1);
-            i32 value = random_next();
-            tree_insert(lt.arena, &t, value);
-            tree_delete(lt.arena, &t, value);
-            tree_insert(lt.arena, &t, value);
             UNREACHABLE("should have failed earlier");
         });
 
@@ -83,7 +74,12 @@ TEST_MAIN({
         });
 
         IT("should remove the value from the tree", {
-            Tree t = tree_new(lt.arena, 1);
+            i32 count = random_next_bounded(64) + 1;
+
+            Tree t = tree_new(lt.arena, count);
+            for (i32 i = 0; i < count - 1; i++)
+                tree_insert(lt.arena, &t, random_next());
+
             i32 value = random_next();
             tree_insert(lt.arena, &t, value);
             tree_delete(lt.arena, &t, value);

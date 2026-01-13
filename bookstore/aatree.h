@@ -7,6 +7,7 @@
 #include "./arena.h"
 #include "./array.h"
 #include "./basic.h"
+#include <stdbool.h>
 
 typedef struct {
     i32 *index;
@@ -30,6 +31,7 @@ ARRAY_DECLARE_PREFIX(i32, AATree__WalkStack, aatree__walk_stack);
     typedef struct name {                                                      \
         AATREE_FIELDS(TNode);                                                  \
         i32 root_index;                                                        \
+        i32 dangling_index;                                                    \
     } name
 
 #define AATREE_DECLARE(TValue, TNode, name)                                    \
@@ -42,7 +44,7 @@ ARRAY_DECLARE_PREFIX(i32, AATree__WalkStack, aatree__walk_stack);
     } name##WalkEntry;                                                         \
     typedef bool (*name##WalkVisitCallback)(name##WalkEntry entry);            \
     ARRAY_DECLARE_PREFIX(TNode, name, name##_);                                \
-    name prefix##_new(Arena *arena, i32 max_insertions);                       \
+    name prefix##_new(Arena *arena, i32 capacity);                             \
     bool prefix##_insert(Arena *arena, name *self, TValue value);              \
     bool prefix##_delete(Arena *arena, name *self, TValue value);              \
     const TValue *prefix##_find(Arena *arena, name self, TValue value);        \
@@ -96,11 +98,12 @@ ARRAY_DECLARE_PREFIX(i32, AATree__WalkStack, aatree__walk_stack);
                 right->level = target_level;                                   \
         }                                                                      \
     }                                                                          \
-    name prefix##_new(Arena *arena, i32 max_insertions) {                      \
-        name self = name##__new(arena, max_insertions + 1);                    \
+    name prefix##_new(Arena *arena, i32 capacity) {                            \
+        name self = name##__new(arena, capacity + 1);                          \
         TNode null_node = {0};                                                 \
         name##__push(&self, null_node);                                        \
         self.root_index = 0;                                                   \
+        self.dangling_index = 0;                                               \
         return self;                                                           \
     }                                                                          \
     bool prefix##_insert(Arena *arena, name *self, TValue value) {             \
@@ -116,14 +119,22 @@ ARRAY_DECLARE_PREFIX(i32, AATree__WalkStack, aatree__walk_stack);
                 frame->visited = true;                                         \
                 if (added) continue;                                           \
                 if (!*frame->index) {                                          \
-                    *frame->index = self->count;                               \
                     TNode node = {                                             \
                         .value = value,                                        \
                         .level = 1,                                            \
                         .left_index = 0,                                       \
                         .right_index = 0,                                      \
                     };                                                         \
-                    name##__push(self, node);                                  \
+                    if (self->dangling_index) {                                \
+                        i32 new_index = self->dangling_index;                  \
+                        self->dangling_index =                                 \
+                            self->items[new_index].left_index;                 \
+                        *frame->index = new_index;                             \
+                        self->items[new_index] = node;                         \
+                    } else {                                                   \
+                        *frame->index = self->count;                           \
+                        name##__push(self, node);                              \
+                    }                                                          \
                     added = true;                                              \
                     continue;                                                  \
                 }                                                              \
@@ -181,6 +192,8 @@ ARRAY_DECLARE_PREFIX(i32, AATree__WalkStack, aatree__walk_stack);
                     deleted_node->value = node->value;                         \
                     deleted = 0;                                               \
                     *last = node->right_index;                                 \
+                    node->left_index = self->dangling_index;                   \
+                    self->dangling_index = index;                              \
                     found = true;                                              \
                 } else {                                                       \
                     TNode left = name##__get(*self, node->left_index);         \
