@@ -145,9 +145,7 @@ bool build_tests_visit(WalkEntry entry) {
         COMMAND_CC_OUTPUT(lt.arena, &command, output.items);
         COMMAND_CC_INPUTS(&command, entry.path);
 
-        if (!COMMAND_RUN(lt.arena, &command, .async = data->procs,
-                         .concurrency = data->concurrency))
-            DEFER_RETURN(false);
+        if (!COMMAND_RUN(lt.arena, &command)) DEFER_RETURN(false);
     }
 
     DEFER_LABEL({ lifetime_end(lt); });
