@@ -20,10 +20,11 @@
 #define _WINGDI_
 #define _IMM_
 #define _WINCON_
+#include <windows.h>
+
 #include <direct.h>
 #include <io.h>
 #include <shellapi.h>
-#include <windows.h>
 #else
 #include <sys/fcntl.h>
 #include <sys/wait.h>
