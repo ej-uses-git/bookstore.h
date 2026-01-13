@@ -14,7 +14,15 @@
 #include <string.h>
 
 #ifdef _WIN32
-#error "WIN32"
+#define WIN32_LEAN_AND_MEAN
+#define _WINUSER_
+#define _WINGDI_
+#define _IMM_
+#define _WINCON_
+#include <direct.h>
+#include <io.h>
+#include <shellapi.h>
+#include <windows.h>
 #else
 #include <dirent.h>
 #include <fcntl.h>
