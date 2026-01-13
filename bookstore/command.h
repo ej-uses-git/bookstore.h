@@ -353,7 +353,7 @@ internal void command__win32_quote(Command command, StringBuilder *quoted) {
 StringView command_render(Arena *arena, Command command) {
     i32 capacity = 0;
     i32 arg_count = command.count;
-    StringView svs[arg_count];
+    StringView *svs = arena_alloc(arena, arg_count);
     for (i32 i = 0; i < arg_count; i++) {
         StringView sv = sv_from_cstr(command.items[i]);
         svs[i] = sv;

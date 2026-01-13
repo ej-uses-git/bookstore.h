@@ -66,7 +66,7 @@
 #if defined(_MSC_VER) && !defined(__clang__)
 #define COMMAND_CC_OUTPUT(arena, command, output_path)                         \
     COMMAND_APPEND(command, arena_sprintf(arena, "/Fe:%s", (output_path)),     \
-                   arena_sprintf("/Fo:%s", (output_path)))
+                   arena_sprintf(arena, "/Fo:%s", (output_path)))
 #else
 #define COMMAND_CC_OUTPUT(arena, command, output_path)                         \
     COMMAND_APPEND(command, "-o", (output_path))
