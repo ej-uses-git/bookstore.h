@@ -124,9 +124,7 @@ bool build_tests_visit(WalkEntry entry) {
                    SV_ARG(output_dir), SV_ARG(basename));
         sb_push_null(&output);
 
-        log_debug("Checking if '%s' needs to be rebuilt...", output.items);
         i8 needs_rebuild = build_needs_rebuild(output.items, dependencies);
-        log_debug("needs_rebuild = %d", needs_rebuild);
         if (needs_rebuild < 0) DEFER_RETURN(false);
         if (!needs_rebuild) {
             log_debug("Nothing to do for '%s'", output.items);

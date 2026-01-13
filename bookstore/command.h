@@ -351,26 +351,19 @@ internal void command__win32_quote(Command command, StringBuilder *quoted) {
 #endif // _WIN32
 
 StringView command_render(Arena *arena, Command command) {
-    log_debug("Rendering command for printing a log; count=" I32_FMT,
-              command.count);
-
     i32 capacity = 0;
     i32 arg_count = command.count;
     StringView *svs = arena_alloc(arena, sizeof(StringView) * arg_count);
     for (i32 i = 0; i < arg_count; i++) {
         StringView sv = sv_from_cstr(command.items[i]);
-        log_debug("svs[" I32_FMT "] = " SV_FMT, i, SV_ARG(sv));
         svs[i] = sv;
         // Pretend that every argument needs to be quoted;
         // this overshoots the capacity but probably not by that much
         capacity += sv.count + 2 + (i != 0);
     }
-    log_debug("capacity = " I32_FMT, capacity);
 
     StringBuilder sb = sb_new(arena, capacity);
     for (i32 i = 0; i < arg_count; i++) {
-        log_debug("(" I32_FMT ") sb.count = " I32_FMT, i, sb.count);
-
         if (i > 0) sb_push(&sb, ' ');
 
         StringView sv = svs[i];
@@ -383,8 +376,6 @@ StringView command_render(Arena *arena, Command command) {
             sb_push(&sb, '\'');
         }
     }
-
-    log_debug("sb = '" SB_FMT "'", SB_ARG(sb));
 
     return sb_to_sv(sb);
 }
