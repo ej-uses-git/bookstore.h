@@ -115,4 +115,6 @@ TEST_MAIN({
             tree_walk(lt.arena, t, tree_visit, &min);
         });
     });
+
+    arena_destroy(arena);
 })

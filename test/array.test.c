@@ -180,4 +180,6 @@ TEST_MAIN({
             EXPECT_EQ(arr.count, count, "%d");
         });
     });
+
+    arena_destroy(arena);
 })

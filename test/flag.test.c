@@ -215,4 +215,6 @@ TEST_MAIN({
             });
         });
     });
+
+    arena_destroy(arena);
 })
