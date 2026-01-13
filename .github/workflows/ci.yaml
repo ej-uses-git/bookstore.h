@@ -14,20 +14,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
-    name: Continuous Integration
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
-    runs-on: ${{ matrix.os }}
+  windows:
+    name: Continuous Integration (Windows)
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
-      - if: matrix.os != 'windows-latest'
-        run: |
-          gcc -o build build.c && ./build -d build test
-      - if: matrix.os == 'windows-latest'
-        run: |
-          gcc -o build.exe build.c && ./build.exe -d build test
+      # https://github.com/actions/runner-images/issues/6205#issuecomment-1241573412
+      # https://learn.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=msvc-170#create-your-own-command-prompt-shortcut
+      - run: |
+          call "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Auxiliary\\Build\\vcvars64.bat"
+          cl.exe /Fe:build build.c
+          build.exe -d build test
+  macos:
+    name: Continuous Integration (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          clang -o build build.c 
+          ./build -d build test
+  ubuntu:
+    name: Continuous Integration (Ubuntu)
+    strategy:
+      matrix:
+        cc:
+          - clang
+          - gcc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          ${{ matrix.cc }} -o build build.c 
+          ./build -d build test
