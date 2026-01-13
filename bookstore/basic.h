@@ -5,6 +5,7 @@
 #define BASIC_H_
 
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -213,7 +214,6 @@ void log_error(const char *fmt, ...) PRINTF_FORMAT(1, 2);
 
 #ifdef BOOKSTORE_IMPLEMENTATION
 
-#include <stdarg.h>
 #include <stdlib.h>
 
 void vlog_with_level(LogLevel level, const char *fmt, va_list args) {
