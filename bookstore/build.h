@@ -36,8 +36,7 @@
 
 #ifndef COMMAND_CC_DEBUG_INFO
 #if defined(_MSC_VER) && !defined(__clang__)
-// TODO: Debug info for MSVC
-#define COMMAND_CC_DEBUG_INFO(command) TODO("Debug info for MSVC")
+#define COMMAND_CC_DEBUG_INFO(command) COMMAND_APPEND(command, "/Zi")
 #else
 #define COMMAND_CC_DEBUG_INFO(command) COMMAND_APPEND(command, "-g")
 #endif // defined(_MSC_VER) && !defined(__clang__)
@@ -45,17 +44,16 @@
 
 #ifndef COMMAND_CC_OPTIMIZE
 #if defined(_MSC_VER) && !defined(__clang__)
-// TODO: Optimize for MSVC
-#define COMMAND_CC_OPTIMIZE(command) TODO("Optimize for MSVC")
+#define COMMAND_CC_OPTIMIZE(command) COMMAND_APPEND(command, "/O2")
 #else
-#define COMMAND_CC_OPTIMIZE(command) COMMAND_APPEND(command, "-03")
+#define COMMAND_CC_OPTIMIZE(command) COMMAND_APPEND(command, "-O3")
 #endif // defined(_MSC_VER) && !defined(__clang__)
 #endif // COMMAND_CC_OPTIMIZE
 
 #ifndef COMMAND_CC_ADDRESS_SANITIZE
 #if defined(_MSC_VER) && !defined(__clang__)
-// TODO: address sanitize for MSVC
-#define COMMAND_CC_ADDRESS_SANITIZE(command) TODO("address sanitize for MSVC")
+#define COMMAND_CC_ADDRESS_SANITIZE(command)                                   \
+    COMMAND_APPEND(command, "/fsanitize=address")
 #else
 #define COMMAND_CC_ADDRESS_SANITIZE(command)                                   \
     COMMAND_APPEND(command, "-fsanitize=address")
