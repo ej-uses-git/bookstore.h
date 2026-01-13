@@ -37,19 +37,6 @@
         goto defer__label;                                                     \
     } while (0)
 
-// Ordering logic
-
-// TODO: comment this
-typedef enum {
-    ORDER_LT = -1,
-    ORDER_EQ = 0,
-    ORDER_GT = 1
-} Order;
-
-// TODO: comment this
-#define COMPARE_BASIC(a, b)                                                    \
-    ((a) < (b) ? ORDER_LT : (a) > (b) ? ORDER_GT : ORDER_EQ)
-
 // Integer type definitions
 
 // An 8 bit signed integer.
@@ -118,6 +105,23 @@ typedef uint64_t u64;
 #define LTE(a, b) ((a) <= (b))
 // GTE - compare using `>=`
 #define GTE(a, b) ((a) >= (b))
+
+// Ordering logic
+
+// An enumeration implying the order between two different values. "Compare"
+// macros and functions should return this enumeration, and can then be used to
+// sort data structures.
+typedef enum {
+    // The first value is less than the second value.
+    ORDER_LT = -1,
+    // The two values are equal.
+    ORDER_EQ = 0,
+    // The first value is greater than the second value.
+    ORDER_GT = 1
+} Order;
+// A basic "compare" macro, using `>` and `<` to get an `Order` from two values.
+#define COMPARE_BASIC(a, b)                                                    \
+    ((a) < (b) ? ORDER_LT : (a) > (b) ? ORDER_GT : ORDER_EQ)
 
 // PRINTF_FORMAT - decorate a function to check for proper `printf` formatting:
 // the first argument is the index of the string `fmt` argument,
