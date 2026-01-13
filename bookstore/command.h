@@ -412,7 +412,22 @@ internal Process command__start_process(Arena *arena, Command command,
     ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
 
     Lifetime lt = lifetime_begin(arena);
-    StringBuilder quoted = sb_new(lt.arena, TODO("quoted capacity?"));
+    i32 capacity = 0;
+    for (i32 i = 0; i < command.count; i++) {
+        if (i) capacity++;
+        StringView arg = sv_from_cstr(command.items[i]);
+        i32 slashes = 0;
+        bool quotes = false;
+        for (i32 j = 0; j < arg.count; j++) {
+            if (arg.data[j] == '\\') {
+                slashes++;
+            } else if (isspace(arg.data[j])) {
+                quotes = true;
+            }
+        }
+        capacity += arg.count + slashes + (quotes * 2);
+    }
+    StringBuilder quoted = sb_new(lt.arena, capacity);
     command__win32_quote(command, &quoted);
     sb_push_null(&quoted);
     BOOL bSuccess = CreateProcessA(NULL, quoted.items, NULL, NULL, TRUE, 0,
