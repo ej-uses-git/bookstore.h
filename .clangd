@@ -3,7 +3,3 @@ If:
   PathMatch: bookstore/.*\.h
 CompileFlags:
   Add: [-DBOOKSTORE_IMPLEMENTATION]
-Diagnostics:
-  Suppress:
-    - -Wmisc-definitions-in-headers
-    - -Wunused-includes
