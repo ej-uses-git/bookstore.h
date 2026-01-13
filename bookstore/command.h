@@ -10,16 +10,15 @@
 #include "array.h"
 #include "basic.h"
 #include "string.h"
-#include <_time.h>
 #include <stdbool.h>
 #include <string.h>
-#include <sys/wait.h>
 #include <time.h>
 
 #ifdef _WIN32
 #error "TODO: WIN32 includes"
 #else
 #include <sys/fcntl.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #endif // _WIN32
 
