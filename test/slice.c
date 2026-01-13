@@ -4,29 +4,30 @@
 
 #define EXPECT_EQ_D(a, b) EXPECT_EQ(a, b, "%d")
 
+#define BUF_SIZE 10
+
 SLICE_TYPEDEF(i32, slice);
 SLICE_DEFINE(i32, slice)
 
 TEST_MAIN({
-    i32 size = 10;
-    i32 buf[size];
+    i32 buf[BUF_SIZE];
     slice slc;
 
     BEFORE_EACH({
-        for (i32 i = 0; i < size; i++) buf[i] = i + 1;
-        slc = slice_from_parts(buf, size);
+        for (i32 i = 0; i < BUF_SIZE; i++) buf[i] = i + 1;
+        slc = slice_from_parts(buf, BUF_SIZE);
     });
 
     DESCRIBE("slice_get", {
         IT("should return the item at the given index", {
-            for (i32 i = 0; i < size; i++) {
+            for (i32 i = 0; i < BUF_SIZE; i++) {
                 EXPECT_EQ_D(slice_get(slc, i), buf[i]);
             }
         });
 
         IT("should respect negative indexes", {
-            for (i32 i = size - 1; i >= 0; i--) {
-                i32 index = i - size;
+            for (i32 i = BUF_SIZE - 1; i >= 0; i--) {
+                i32 index = i - BUF_SIZE;
                 EXPECT_EQ_D(slice_get(slc, index), buf[i]);
             }
         });
@@ -55,23 +56,23 @@ TEST_MAIN({
     DESCRIBE("slice_pop", {
         IT("should decrease the count by one", {
             slice_pop(&slc);
-            EXPECT_EQ_D(slc.count, size - 1);
+            EXPECT_EQ_D(slc.count, BUF_SIZE - 1);
         });
 
         IT("should return the last element", {
             i32 chopped = slice_pop(&slc);
-            EXPECT_EQ_D(chopped, buf[size - 1]);
+            EXPECT_EQ_D(chopped, buf[BUF_SIZE - 1]);
         });
     });
 
     DESCRIBE("slice_strip_start", {
-        i32 strip_size = size / 2;
+        i32 strip_size = BUF_SIZE / 2;
         slice stripped;
 
         BEFORE_EACH({ stripped = slice_strip_start(&slc, strip_size); });
 
         IT("should modify the original slice", {
-            EXPECT_EQ_D(slc.count, size - strip_size);
+            EXPECT_EQ_D(slc.count, BUF_SIZE - strip_size);
             for (i32 i = 0; i < slc.count; i++) {
                 EXPECT_EQ_D(slice_get(slc, i), buf[i + strip_size]);
             }
@@ -86,13 +87,13 @@ TEST_MAIN({
     });
 
     DESCRIBE("slice_strip_end", {
-        i32 strip_size = size / 2;
+        i32 strip_size = BUF_SIZE / 2;
         slice stripped;
 
         BEFORE_EACH({ stripped = slice_strip_end(&slc, strip_size); });
 
         IT("should modify the original slice", {
-            EXPECT_EQ_D(slc.count, size - strip_size);
+            EXPECT_EQ_D(slc.count, BUF_SIZE - strip_size);
             for (i32 i = 0; i < slc.count; i++) {
                 EXPECT_EQ_D(slice_get(slc, i), buf[i]);
             }
