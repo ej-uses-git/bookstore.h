@@ -25,7 +25,7 @@ jobs:
         shell: cmd
         run: |
           call "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Auxiliary\\Build\\vcvars64.bat"
-          cl.exe /W4 /nologo /D_CRT_SECURE_NO_WARNINGS /DBOOKSTORE_IMPLEMENTATION /Fe:bin\test\aatree.test /Fo:bin\test\aatree.test test\aatree.test.c
+          cl.exe /W4 /nologo /D_CRT_SECURE_NO_WARNINGS /DBOOKSTORE_IMPLEMENTATION /Fe:bin\test\aatree /Fo:bin\test\aatree test\aatree.test.c
   macos:
     name: Continuous Integration (macOS)
     runs-on: macos-latest
