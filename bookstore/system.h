@@ -475,7 +475,9 @@ bool make_directory_recursively(Arena *arena, const char *path) {
         StringView basename = sv_cut_delimiter(&sv, SYSTEM_PATH_DELIMITER);
 
         if (cur) {
-            cur = arena_sprintf(lt.arena, "%s/" SV_FMT, cur, SV_ARG(basename));
+            cur = arena_sprintf(lt.arena,
+                                "%s" SYSTEM_PATH_DELIMITER_STRING SV_FMT, cur,
+                                SV_ARG(basename));
         } else {
             cur = sv_to_cstr(lt.arena, basename);
         }
