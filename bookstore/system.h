@@ -444,7 +444,8 @@ bool system__walk_directory_opt_impl(Arena *arena, StringBuilder *path,
     DEFER_SETUP(bool, true);
 
 #ifdef _WIN32
-    TODO("WIN32");
+    WIN32_FIND_DATA data;
+    HANDLE hFind = INVALID_HANDLE_VALUE;
 #else
     DIR *dir = NULL;
 #endif // _WIN32
@@ -463,7 +464,7 @@ bool system__walk_directory_opt_impl(Arena *arena, StringBuilder *path,
         .first = first_on_level,
     };
 
-    if (!opt.depth_first) {
+    if (!opt.post_order) {
         if (!visit(entry)) DEFER_RETURN(false);
 
         switch (action) {
@@ -474,12 +475,21 @@ bool system__walk_directory_opt_impl(Arena *arena, StringBuilder *path,
     }
 
     if (type != FILE_TYPE_DIRECTORY) {
-        if (opt.depth_first && !visit(entry)) DEFER_RETURN(false);
+        if (opt.post_order && !visit(entry)) DEFER_RETURN(false);
         DEFER_RETURN(true);
     }
 
 #ifdef _WIN32
-    TODO("WIN32");
+    Lifetime lt = lifetime_begin(arena);
+    char *buffer = arena_sprintf(arena, "%s\\*", path->items);
+    hFind = FindFirstFile(buffer, &data);
+    lifetime_end(lt);
+
+    if (hFind == INVALID_HANDLE_VALUE) {
+        log_error("Failed to open directory '%s': %s", path->items,
+                  system__win32_error_message(GetLastError()));
+        DEFER_RETURN(false);
+    }
 #else
     dir = opendir(path->items);
     if (dir == NULL) {
@@ -493,13 +503,15 @@ bool system__walk_directory_opt_impl(Arena *arena, StringBuilder *path,
     i32 mark = path->count - 1;
 
 #ifdef _WIN32
-    TODO("WIN32");
+    for (;;) {
+        const char *name = data.cFileName;
 #else
     errno = 0;
     struct dirent *ent = readdir(dir);
     bool first = true;
     while (ent != NULL) {
         const char *name = ent->d_name;
+#endif // _WIN32
         i32 name_length = strlen(name);
         bool is_default = (name_length == 1 && name[0] == '.') ||
             (name_length == 2 && name[0] == '.' && name[1] == '.');
@@ -517,11 +529,23 @@ bool system__walk_directory_opt_impl(Arena *arena, StringBuilder *path,
             if (*stop) DEFER_RETURN(true);
             first = false;
         }
+
+#ifdef _WIN32
+        if (!FindNextFile(hFind, &data)) {
+            if (GetLastError() == ERROR_NO_MORE_FILES) DEFER_RETURN(true);
+            log_error("Failed to read directory '%s': %s", sb->items,
+                      system__win32_error_message(GetLastError()));
+            DEFER_RETURN(false);
+        }
+#else
         ent = readdir(dir);
+#endif // _WIN32
     }
     path->count = mark;
     sb_push_null(path);
 
+#ifdef _WIN32
+#else
     if (errno != 0) {
         log_error("Failed to read directory '%s': %s", path->items,
                   strerror(errno));
@@ -529,17 +553,14 @@ bool system__walk_directory_opt_impl(Arena *arena, StringBuilder *path,
     }
 #endif // _WIN32
 
-    if (opt.depth_first) {
+    if (opt.post_order) {
         if (!visit(entry)) DEFER_RETURN(false);
 
         if (action == WALK_STOP) *stop = true;
     }
 
 #ifdef _WIN32
-    DEFER_LABEL({
-        // TODO: clean up on Windows
-        TODO("WIN32");
-    });
+    DEFER_LABEL({ FindClose(hFind); });
 #else
     DEFER_LABEL({
         if (dir) closedir(dir);
@@ -636,7 +657,7 @@ bool delete_directory_recursively(Arena *arena, const char *path) {
     Lifetime lt = lifetime_begin(arena);
     bool result =
         WALK_DIRECTORY(arena, path, system__delete_directory_recursively_visit,
-                       .depth_first = true);
+                       .post_order = true);
     lifetime_end(lt);
     return result;
 }
