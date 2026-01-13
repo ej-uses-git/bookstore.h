@@ -351,6 +351,9 @@ internal void command__win32_quote(Command command, StringBuilder *quoted) {
 #endif // _WIN32
 
 StringView command_render(Arena *arena, Command command) {
+    log_debug("Rendering command for printing a log; count=" I32_FMT,
+              command.count);
+
     i32 capacity = 0;
     i32 arg_count = command.count;
     StringView *svs = arena_alloc(arena, arg_count);
