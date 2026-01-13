@@ -359,11 +359,13 @@ StringView command_render(Arena *arena, Command command) {
     StringView *svs = arena_alloc(arena, arg_count);
     for (i32 i = 0; i < arg_count; i++) {
         StringView sv = sv_from_cstr(command.items[i]);
+        log_debug("svs[" I32_FMT "] = " SV_FMT, i, SV_ARG(sv));
         svs[i] = sv;
         // Pretend that every argument needs to be quoted;
         // this overshoots the capacity but probably not by that much
         capacity += sv.count + 2 + (i != 0);
     }
+    log_debug("capacity = " I32_FMT, capacity);
 
     StringBuilder sb = sb_new(arena, capacity);
     for (i32 i = 0; i < arg_count; i++) {
