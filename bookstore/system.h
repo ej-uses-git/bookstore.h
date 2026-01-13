@@ -1,6 +1,8 @@
 /* system.h */
 /* System utilities on Windows and POSIX */
 
+/* Based heavily on nob.h by Rexim (https://github.com/tsoding/nob.h) */
+
 #ifndef SYSTEM_H_
 #define SYSTEM_H_
 
@@ -39,30 +41,61 @@
 // possibly submit a pull request!
 #define SYSTEM_PATH_MAX 4096
 
+// An enumeration of possible filetypes to handle. Typically, functions that
+// read this from the filesystem will return `-1` if the file could not be
+// read.
 typedef enum {
+    // A regular, non-directory file.
     FILE_TYPE_REGULAR,
+    // A directory.
     FILE_TYPE_DIRECTORY,
+    // A symbolic link.
     FILE_TYPE_SYMLINK,
+    // Some other valid filetype.
     FILE_TYPE_OTHER,
 } FileType;
 
+// An action to take when walking a directory.
 typedef enum {
+    // Continue walking the rest of the children of this directory.
     WALK_CONT,
+    // Skip the rest of the children of this directory.
     WALK_SKIP,
+    // Stop walking; skip the rest of the children of this directory and the
+    // rest of the children of any directories which are in the middle of being
+    // recursively walked.
     WALK_STOP,
 } WalkAction;
 
+// The entry passed to the `visit` callback for `WALK_DIRECTORY`.
 typedef struct {
+    // The arena that was used to allocate information about this entry; can be
+    // used to make allocations in the `visit` callback itself. If the allocated
+    // memory does not need to live beyond the callback, consider using a
+    // `Lifetime`.
     Arena *arena;
+    // The `user_data` passed to `WALK_DIRECTORY`.
     void *user_data;
+    // The path of the entry, as a C-string (NUL-terminated list of characters).
     const char *path;
+    // A pointer to a `WalkAction`, which will be checked after visiting this
+    // entry. Set this to `WALK_SKIP` to skip the rest of the entries in this
+    // directory, or to `WALK_STOP` to halt walking altogether.
     WalkAction *action;
+    // The level at which this entry sits, relative to the root directory which
+    // was initially walked. The root itself is passed with a `level` of `0`.
     u32 level;
+    // The filetype of this entry.
     FileType type;
+    // Whether this is the first entry of this `level` to be visited for this
+    // directory.
     bool first;
 } WalkEntry;
 
+// The struct of possible options to pass to `walk_directory_opt`, which also
+// act as the named optional arguments to the `WALK_DIRECTORY` macro.
 typedef struct {
+    // Pointer to data which will be passed along to the `visit` callback.
     void *user_data;
     // Whether to visit entries in post-order traversal; first visiting the
     // deepest nodes and then back up, instead of starting with the shallowest
@@ -70,15 +103,27 @@ typedef struct {
     bool post_order;
 } WalkDirectoryOpt;
 
+// The type of the `visit` callback passed to `WALK_DIRECTORY`.
+typedef bool (*WalkVisitCallback)(WalkEntry entry);
+
+// A filepath, which is just a C-string (NUL-terminated list of characters).
 typedef const char *FilePath;
+// A dynamic array of file paths.
 ARRAY_TYPEDEF(FilePath, FilePaths);
 ARRAY_DECLARE_PREFIX(FilePath, FilePaths, file_paths);
+// An empty array of file paths.
 #define FILE_PATHS_EMPTY (FilePaths){0}
+// Create a file paths array on the stack, from the following list of C-strings
+// (NUL-terminated lists of characters).
+#define FILE_PATHS_LITERAL(...)                                                \
+    (FilePaths) {                                                              \
+        .items = (FilePath[]){__VA_ARGS__},                                    \
+        .count = sizeof((FilePath[]){__VA_ARGS__}) / sizeof(FilePath),         \
+    }
+// Append multiple paths to a `FilePaths` array.
 #define FILE_PATHS_APPEND(paths, ...)                                          \
     file_paths_append(paths, (FilePath[]){__VA_ARGS__},                        \
                       sizeof((FilePath[]){__VA_ARGS__}) / sizeof(FilePath))
-
-typedef bool (*WalkVisitCallback)(WalkEntry entry);
 
 StringView dirname_and_basename(StringView *basename);
 StringView get_basename(StringView path);
@@ -118,7 +163,7 @@ ARRAY_DEFINE_PREFIX(FilePath, FilePaths, file_paths)
 #define WIN32_ERR_MSG_SIZE (4 * 1024)
 #endif // WIN32_ERR_MSG_SIZE
 
-char *system__win32_error_message(DWORD) {
+char *system__win32_error_message(DWORD err) {
     persist char win_32_err_msg[WIN32_ERR_MSG_SIZE] = {0};
     DWORD err_msg_size = FormatMessageA(
         FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err,
