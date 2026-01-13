@@ -4,20 +4,9 @@
 #ifndef AATREE_H_
 #define AATREE_H_
 
-#include "./arena.h"
 #include "./array.h"
 #include "./basic.h"
 #include <stdbool.h>
-
-typedef struct {
-    i32 *index;
-    bool visited;
-} AATree__StackFrame;
-ARRAY_TYPEDEF(AATree__StackFrame, AATree__Stack);
-ARRAY_DECLARE_PREFIX(AATree__StackFrame, AATree__Stack, aatree__stack);
-
-ARRAY_TYPEDEF(i32, AATree__WalkStack);
-ARRAY_DECLARE_PREFIX(i32, AATree__WalkStack, aatree__walk_stack);
 
 #define AANODE_TYPEDEF(T, name)                                                \
     typedef struct name {                                                      \
@@ -43,7 +32,6 @@ ARRAY_DECLARE_PREFIX(i32, AATree__WalkStack, aatree__walk_stack);
         TValue value;                                                          \
     } name##WalkEntry;                                                         \
     typedef bool (*name##WalkVisitCallback)(name##WalkEntry entry);            \
-    ARRAY_DECLARE_PREFIX(TNode, name, name##_);                                \
     name prefix##_new(Arena *arena, i32 capacity);                             \
     bool prefix##_insert(Arena *arena, name *self, TValue value);              \
     bool prefix##_delete(Arena *arena, name *self, TValue value);              \
@@ -271,7 +259,16 @@ ARRAY_DECLARE_PREFIX(i32, AATree__WalkStack, aatree__walk_stack);
 
 #ifdef BOOKSTORE_IMPLEMENTATION
 
+#include "./arena.h"
+
+typedef struct {
+    i32 *index;
+    bool visited;
+} AATree__StackFrame;
+ARRAY_TYPEDEF(AATree__StackFrame, AATree__Stack);
 ARRAY_DEFINE_PREFIX(AATree__StackFrame, AATree__Stack, aatree__stack)
+
+ARRAY_TYPEDEF(i32, AATree__WalkStack);
 ARRAY_DEFINE_PREFIX(i32, AATree__WalkStack, aatree__walk_stack)
 
 #endif // BOOKSTORE_IMPLEMENTATION

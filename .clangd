@@ -1,5 +1,5 @@
 ---
 If:
-  PathMatch: bookstore/.*\.h
+  PathMatch: [bookstore/.*\.h, test/.*\.test\.c]
 CompileFlags:
   Add: [-DBOOKSTORE_IMPLEMENTATION]

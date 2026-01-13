@@ -2,6 +2,7 @@
 
 #include "../bookstore/aatree.h"
 #include "../bookstore/random.h"
+
 #include <time.h>
 
 AANODE_TYPEDEF(i32, Node);
