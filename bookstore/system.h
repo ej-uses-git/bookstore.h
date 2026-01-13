@@ -234,7 +234,7 @@ bool delete_file(const char *path) {
 }
 
 bool write_file(const char *path, StringView contents) {
-    DEFER_SETUP(bool, false);
+    DEFER_SETUP(bool, true);
 
     FILE *f = fopen(path, "wb");
     if (f == NULL) {
