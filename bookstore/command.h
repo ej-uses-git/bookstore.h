@@ -356,7 +356,7 @@ StringView command_render(Arena *arena, Command command) {
 
     i32 capacity = 0;
     i32 arg_count = command.count;
-    StringView *svs = arena_alloc(arena, arg_count);
+    StringView *svs = arena_alloc(arena, sizeof(StringView) * arg_count);
     for (i32 i = 0; i < arg_count; i++) {
         StringView sv = sv_from_cstr(command.items[i]);
         log_debug("svs[" I32_FMT "] = " SV_FMT, i, SV_ARG(sv));
