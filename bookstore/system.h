@@ -197,9 +197,11 @@ char *system__win32_error_message(DWORD err) {
 #endif // _WIN32
 
 #ifdef _WIN32
-#define SYSTEM_PATH_DELIMITER '\\'
+#define SYSTEM_PATH_DELIMITER        '\\'
+#define SYSTEM_PATH_DELIMITER_STRING "\\"
 #else
-#define SYSTEM_PATH_DELIMITER '/'
+#define SYSTEM_PATH_DELIMITER        '/'
+#define SYSTEM_PATH_DELIMITER_STRING "/"
 #endif // _WIN32
 
 StringView dirname_and_basename(StringView *basename) {

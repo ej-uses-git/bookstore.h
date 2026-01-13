@@ -9,7 +9,7 @@
 
 #define BIN_DIR         "bin"
 #define BOOKSTORE_DIR   "bookstore"
-#define TEST_OUTPUT_DIR BIN_DIR SYSTEM_PATH_DELIMITER "test"
+#define TEST_OUTPUT_DIR BIN_DIR SYSTEM_PATH_DELIMITER_STRING "test"
 #define TEST_INPUT_DIR  "test"
 
 bool build_tests(Arena *arena, FilePaths dependencies);
