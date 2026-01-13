@@ -138,10 +138,9 @@ bool build_tests_visit(WalkEntry entry) {
         COMMAND_CC_FLAGS(&command);
 
         // TODO: do this only in debug mode?
-#ifndef _WIN32
         COMMAND_CC_DEBUG_INFO(&command);
-        COMMAND_CC_ADDRESS_SANITIZE(&command);
 #endif // _WIN32
+        COMMAND_CC_ADDRESS_SANITIZE(&command);
 
         COMMAND_CC_DEFINE(lt.arena, &command, "BOOKSTORE_IMPLEMENTATION");
         COMMAND_CC_OUTPUT(lt.arena, &command, output.items);
