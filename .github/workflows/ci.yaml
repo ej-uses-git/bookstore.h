@@ -25,6 +25,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
-      - run: |
-          gcc -o build build.c
-          ./build -d build test
+      - if: matrix.os != 'windows-latest'
+        run: |
+          gcc -o build build.c && ./build -d build test
+      - if: matrix.os == 'windows-latest'
+        run: |
+          gcc -o build.exe build.c && ./build.exe -d build test
