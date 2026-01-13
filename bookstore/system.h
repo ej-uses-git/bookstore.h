@@ -207,7 +207,7 @@ FileType get_file_type(const char *path) {
     if (attr == INVALID_FILE_ATTRIBUTES) {
         log_error("Failed to get attributes of '%s': %s", path,
                   system__win32_error_message(GetLastError()));
-        return FILE_TYPE_INVALID;
+        return -1;
     }
 
     if (attr & FILE_ATTRIBUTE_DIRECTORY) return FILE_TYPE_DIRECTORY;
@@ -379,7 +379,7 @@ bool copy_file(Arena *arena, const char *src, const char *dest) {
 
 bool rename_file(const char *path, const char *new_path) {
 #ifdef _WIN32
-    if (!MoveFileEx(old_path, new_path, MOVEFILE_REPLACE_EXISTING)) {
+    if (!MoveFileEx(path, new_path, MOVEFILE_REPLACE_EXISTING)) {
         log_error("Failed to rename '%s' to '%s': %s", path, new_path,
                   system__win32_error_message(GetLastError()));
         return false;
@@ -505,13 +505,13 @@ bool system__walk_directory_opt_impl(Arena *arena, StringBuilder *path,
     // Mark before the NUL character
     i32 mark = path->count - 1;
 
+    bool first = true;
 #ifdef _WIN32
     for (;;) {
         const char *name = data.cFileName;
 #else
     errno = 0;
     struct dirent *ent = readdir(dir);
-    bool first = true;
     while (ent != NULL) {
         const char *name = ent->d_name;
 #endif // _WIN32
@@ -536,7 +536,7 @@ bool system__walk_directory_opt_impl(Arena *arena, StringBuilder *path,
 #ifdef _WIN32
         if (!FindNextFile(hFind, &data)) {
             if (GetLastError() == ERROR_NO_MORE_FILES) DEFER_RETURN(true);
-            log_error("Failed to read directory '%s': %s", sb->items,
+            log_error("Failed to read directory '%s': %s", path->items,
                       system__win32_error_message(GetLastError()));
             DEFER_RETURN(false);
         }
