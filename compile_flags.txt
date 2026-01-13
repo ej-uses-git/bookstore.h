@@ -1,6 +1,0 @@
--Wall
--Werror
--Wextra
--pedantic
--std=c23
--xc

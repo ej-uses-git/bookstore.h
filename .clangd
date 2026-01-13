@@ -1,5 +1,7 @@
+CompileFlags:
+  Add: [-Wall, -Wextra]
 ---
 If:
   PathMatch: [bookstore/.*\.h, test/.*\.test\.c]
 CompileFlags:
-  Add: [-DBOOKSTORE_IMPLEMENTATION]
+  Add: [-DBOOKSTORE_IMPLEMENTATION, -xc]

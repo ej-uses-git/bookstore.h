@@ -12,7 +12,7 @@
 #define TEST_OUTPUT_DIR BIN_DIR "/test"
 #define TEST_INPUT_DIR  "test"
 
-bool build_tests(Arena *arena, FilePaths dependencies, Command compile_flags);
+bool build_tests(Arena *arena, FilePaths dependencies);
 bool run_tests(Arena *arena);
 
 void usage(FILE *stream) {
@@ -68,9 +68,6 @@ int main(int argc, const char **argv) {
         return 0;
     }
 
-    Command compile_flags = command_new(arena, 32);
-    COMMAND_COMPILE_FLAGS_TXT(arena, &compile_flags);
-
     Args args = FLAG_REST_ARGS();
 
     if (!args.count) {
@@ -83,7 +80,7 @@ int main(int argc, const char **argv) {
         if (!delete_directory_recursively(arena, BIN_DIR)) return 1;
     }
     if (args_index_of(args, sv_from_cstr("build")) >= 0) {
-        if (!build_tests(arena, dependencies, compile_flags)) return 1;
+        if (!build_tests(arena, dependencies)) return 1;
     }
     if (args_index_of(args, sv_from_cstr("test")) >= 0) {
         if (!run_tests(arena)) return 1;
@@ -95,7 +92,6 @@ int main(int argc, const char **argv) {
 typedef struct {
     ProcessList *procs;
     FilePaths dependencies;
-    Command compile_flags;
     i32 concurrency;
 } BuildTestsVisitData;
 
@@ -138,7 +134,8 @@ bool build_tests_visit(WalkEntry entry) {
         Command command = command_new(lt.arena, 32);
 
         COMMAND_CC(&command);
-        command_append_other(&command, data->compile_flags);
+
+        COMMAND_CC_FLAGS(&command);
 
         // TODO: do this only in debug mode?
         COMMAND_CC_DEBUG_INFO(&command);
@@ -156,13 +153,12 @@ bool build_tests_visit(WalkEntry entry) {
     DEFER_LABEL({ lifetime_end(lt); });
 }
 
-bool build_tests(Arena *arena, FilePaths dependencies, Command compile_flags) {
+bool build_tests(Arena *arena, FilePaths dependencies) {
     i32 concurrency = 64;
     ProcessList procs = process_list_new(arena, concurrency);
 
     BuildTestsVisitData data = {.procs = &procs,
                                 .dependencies = dependencies,
-                                .compile_flags = compile_flags,
                                 .concurrency = concurrency};
 
     if (!make_directory_recursively(arena, TEST_OUTPUT_DIR)) return false;
