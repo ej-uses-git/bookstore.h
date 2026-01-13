@@ -85,7 +85,7 @@ char *arena_sprintf(Arena *arena, const char *fmt, ...) {
     i32 n = vsnprintf(NULL, 0, fmt, args);
     va_end(args);
 
-    char *dest = arena_alloc(arena, n * sizeof(char));
+    char *dest = arena_alloc(arena, n + 1);
     va_start(args, fmt);
     vsnprintf(dest, n + 1, fmt, args);
     va_end(args);
