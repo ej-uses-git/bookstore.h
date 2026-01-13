@@ -384,6 +384,8 @@ StringView command_render(Arena *arena, Command command) {
         }
     }
 
+    log_debug("sb = '" SB_FMT "'", SB_ARG(sb));
+
     return sb_to_sv(sb);
 }
 
