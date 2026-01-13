@@ -182,7 +182,7 @@ const char *get_current_directory(Arena *arena) {
         return NULL;
     }
 
-    char *buffer = (char *)arena_alloc(nBufferLength);
+    char *buffer = (char *)arena_alloc(arena, nBufferLength);
     if (GetCurrentDirectory(nBufferLength, buffer) == 0) {
         log_error("Failed to get current directory: %s",
                   system__win32_error_message(GetLastError()));
