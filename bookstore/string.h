@@ -44,6 +44,8 @@ StringView sv_printf(Arena *arena, const char *fmt, ...) PRINTF_FORMAT(2, 3);
 // Check if a `StringView` is equal to a C-string (NUL-terminated list of
 // characters).
 bool sv_eq_cstr(StringView self, const char *cstr);
+// Compare two `StringView` instances using lexicographic order.
+Order sv_compare(StringView a, StringView b);
 // Strip a `StringView` of whitespace characters.
 void sv_trim(StringView *self);
 // Strip the start of a `StringView` of whitespace characters.
@@ -203,6 +205,18 @@ StringView sv_printf(Arena *arena, const char *fmt, ...) {
 
 bool sv_eq_cstr(StringView self, const char *cstr) {
     return sv_eq(self, sv_from_cstr(cstr));
+}
+
+Order sv_compare(StringView a, StringView b) {
+    i32 count = MAX(a.count, b.count);
+
+    Order ord = ORDER_EQ;
+    for (i32 i = 0; i < count; i++) {
+        char ac = a.count > i ? a.data[i] : '\0';
+        char bc = b.count > i ? b.data[i] : '\0';
+        if ((ord = COMPARE_BASIC(ac, bc))) break;
+    }
+    return ord;
 }
 
 void sv_trim(StringView *self) {
