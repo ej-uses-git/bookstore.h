@@ -72,6 +72,7 @@ typedef bool (*WalkVisitCallback)(WalkEntry entry);
 StringView dirname_and_basename(StringView *basename);
 StringView get_basename(StringView path);
 StringView get_dirname(StringView path);
+const char *get_current_directory(Arena *arena);
 FileType get_file_type(const char *path);
 bool delete_file(const char *path);
 bool write_file(const char *path, StringView contents);
@@ -156,8 +157,37 @@ StringView get_basename(StringView path) {
     dirname_and_basename(&path);
     return path;
 }
+
 StringView get_dirname(StringView path) {
     return dirname_and_basename(&path);
+}
+
+const char *get_current_directory(Arena *arena) {
+#ifdef _WIN32
+    DWORD nBufferLength = GetCurrentDirectory(0, NULL);
+    if (nBufferLength == 0) {
+        log_error("Failed to get current directory: %s",
+                  system__win32_error_message(GetLastError()));
+        return NULL;
+    }
+
+    char *buffer = (char *)arena_alloc(nBufferLength);
+    if (GetCurrentDirectory(nBufferLength, buffer) == 0) {
+        log_error("Failed to get current directory: %s",
+                  system__win32_error_message(GetLastError()));
+        return NULL;
+    }
+
+    return buffer;
+#else
+    char *buffer = (char *)arena_alloc(arena, SYSTEM_PATH_MAX);
+    if (getcwd(buffer, SYSTEM_PATH_MAX) == NULL) {
+        log_error("Failed to get current directory: %s", strerror(errno));
+        return NULL;
+    }
+
+    return buffer;
+#endif // _WIN32
 }
 
 FileType get_file_type(const char *path) {
