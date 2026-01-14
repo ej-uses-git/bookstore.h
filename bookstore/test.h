@@ -42,16 +42,7 @@ void test__expect(bool cond, const char *message);
     int main(void) {                                                           \
         Arena *test__arena =                                                   \
             arena_new((sizeof(Test__Label) * TEST_MAX_DEPTH) +                 \
-                      TEST__MAX_RENDERED_LABEL +                               \
-                      (sizeof(Test__Hook) * TEST_MAX_HOOKS * 2));              \
-        test__context.after_hooks.items =                                      \
-            arena_alloc(test__arena, TEST_MAX_HOOKS * sizeof(jmp_buf));        \
-        memset(test__context.after_hooks.items, 0,                             \
-               TEST_MAX_HOOKS * sizeof(jmp_buf));                              \
-        test__context.before_hooks.items =                                     \
-            arena_alloc(test__arena, TEST_MAX_HOOKS * sizeof(jmp_buf));        \
-        memset(test__context.before_hooks.items, 0,                            \
-               TEST_MAX_HOOKS * sizeof(jmp_buf));                              \
+                      TEST__MAX_RENDERED_LABEL);                               \
         test__context.describe_labels =                                        \
             test__labels_new(test__arena, TEST_MAX_DEPTH);                     \
         do block while (0);                                                    \
@@ -343,10 +334,7 @@ void test__expect(bool cond, const char *message);
     } while (0)
 
 typedef struct {
-    jmp_buf buf;
-} Test__Hook;
-typedef struct {
-    jmp_buf *items;
+    jmp_buf items[TEST_MAX_HOOKS];
     i32 count;
 } Test__Hooks;
 
