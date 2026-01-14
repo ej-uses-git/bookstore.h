@@ -60,8 +60,6 @@ void test__expect(bool cond, const char *message);
         assert(test__context.before_hooks.count < TEST_MAX_HOOKS &&            \
                "out of memory for BEFORE_EACH hooks - you can manually "       \
                "increase TEST_MAX_HOOKS");                                     \
-        log_warn("setting before_hooks.items[%d]",                             \
-                 test__context.after_hooks.count);                             \
         if (setjmp(test__context.before_hooks                                  \
                        .items[test__context.before_hooks.count++])) {          \
             do block while (0);                                                \
@@ -74,8 +72,6 @@ void test__expect(bool cond, const char *message);
         assert(test__context.after_hooks.count < TEST_MAX_HOOKS &&             \
                "out of memory for AFTER_EACH hooks - you can manually "        \
                "increase TEST_MAX_HOOKS");                                     \
-        log_warn("setting after_hooks.items[%d]",                              \
-                 test__context.after_hooks.count);                             \
         if (setjmp(test__context.after_hooks                                   \
                        .items[test__context.after_hooks.count++])) {           \
             do block while (0);                                                \
@@ -132,12 +128,10 @@ void test__expect(bool cond, const char *message);
 #define IT(message, block)                                                     \
     do {                                                                       \
         for (i32 i = 0; i < test__context.before_hooks.count; i++) {           \
-            log_warn("setting it_buf (A)");                                    \
             if (setjmp(test__context.it_buf) == 0) {                           \
                 longjmp(test__context.before_hooks.items[i], 1);               \
             }                                                                  \
         }                                                                      \
-        log_warn("setting it_buf (B)");                                        \
         if (setjmp(test__context.it_buf) == 0) {                               \
             {                                                                  \
                 Lifetime test__lt = lifetime_begin(test__arena);               \
@@ -174,7 +168,6 @@ void test__expect(bool cond, const char *message);
             }                                                                  \
         }                                                                      \
         for (i32 i = test__context.after_hooks.count - 1; i >= 0; i--) {       \
-            log_warn("setting it_buf (C)");                                    \
             if (setjmp(test__context.it_buf) == 0) {                           \
                 longjmp(test__context.after_hooks.items[i], 1);                \
             }                                                                  \
@@ -185,12 +178,10 @@ void test__expect(bool cond, const char *message);
     do {                                                                       \
         test__context.should_fail = true;                                      \
         for (i32 i = 0; i < test__context.before_hooks.count; i++) {           \
-            log_warn("setting it_buf (D)");                                    \
             if (setjmp(test__context.it_buf) == 0) {                           \
                 longjmp(test__context.before_hooks.items[i], 1);               \
             }                                                                  \
         }                                                                      \
-        log_warn("setting it_buf (E)");                                        \
         if (setjmp(test__context.it_buf) == 0) {                               \
             {                                                                  \
                 Lifetime test__lt = lifetime_begin(test__arena);               \
@@ -226,7 +217,6 @@ void test__expect(bool cond, const char *message);
             }                                                                  \
         }                                                                      \
         for (i32 i = test__context.after_hooks.count - 1; i >= 0; i--) {       \
-            log_warn("setting it_buf (F)");                                    \
             if (setjmp(test__context.it_buf) == 0) {                           \
                 longjmp(test__context.after_hooks.items[i], 1);                \
             }                                                                  \
