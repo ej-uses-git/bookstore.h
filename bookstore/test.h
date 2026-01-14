@@ -4,41 +4,54 @@
 #ifndef TEST_H_
 #define TEST_H_
 
+#include <stdbool.h>
+
+// Forward-declare wrapper for `EXPECT` so we can override `ASSERT` before
+// including other files
+void test__expect(bool cond, const char *message);
+
 // Override the definition of `ASSERT` from `basic.h` to use `EXPECT`, which
 // means failed asserts will just fail the current test instead of crashing the
 // program.
-#define ASSERT(cond, message) EXPECT(cond, message)
+#define ASSERT(cond, message) test__expect(cond, message)
 
+#include "./array.h"
 #include "./basic.h"
+#include "./string.h"
 #include <assert.h>
 #include <setjmp.h>
-#include <stdbool.h>
 
 // Maximum `BEFORE_EACH` and `AFTER_EACH` hooks to have active at once.
-#ifndef HOOKS_MAX
-#define HOOKS_MAX 64
-#endif // HOOKS_MAX
+#ifndef TEST_MAX_HOOKS
+#define TEST_MAX_HOOKS 64
+#endif // TEST_MAX_HOOKS
 
-struct {
-    i32 count;
-    jmp_buf items[HOOKS_MAX];
-} test__before_hooks = {0};
-struct {
-    i32 count;
-    jmp_buf items[HOOKS_MAX];
-} test__after_hooks = {0};
-struct {
-    jmp_buf it_buf;
-    i32 describe_level, fails, oks;
-    bool any_failed, should_fail;
-} test__main_context = {0};
+#ifndef TEST_MAX_DEPTH
+#define TEST_MAX_DEPTH 12
+#endif // TEST_MAX_DEPTH
+
+#ifndef TEST_MAX_LABEL_LENGTH
+#define TEST_MAX_LABEL_LENGTH 1024
+#endif // TEST_MAX_LABEL_LENGTH
+
+#define TEST__MAX_RENDERED_LABEL (TEST_MAX_LABEL_LENGTH * (TEST_MAX_DEPTH + 2))
 
 // Define the entry point for a test program, instead of using `int main(...)`.
 // Does the necessary setup and cleanup for the other test-related macros.
 #define TEST_MAIN(block)                                                       \
     int main(void) {                                                           \
+        Arena *test__arena =                                                   \
+            arena_new((sizeof(Test__Label) * TEST_MAX_DEPTH) +                 \
+                      TEST__MAX_RENDERED_LABEL +                               \
+                      (sizeof(Test__Hook) * TEST_MAX_HOOKS * 2));              \
+        test__context.after_hooks.items =                                      \
+            arena_alloc(test__arena, TEST_MAX_HOOKS * sizeof(jmp_buf));        \
+        test__context.before_hooks.items =                                     \
+            arena_alloc(test__arena, TEST_MAX_HOOKS * sizeof(jmp_buf));        \
+        test__context.describe_labels =                                        \
+            test__labels_new(test__arena, TEST_MAX_DEPTH);                     \
         do block while (0);                                                    \
-        if (test__main_context.any_failed) {                                   \
+        if (test__context.fails > 0) {                                         \
             log_error("tests failed");                                         \
             return 1;                                                          \
         } else {                                                               \
@@ -49,107 +62,161 @@ struct {
 // Run a block of setup code before each `IT`.
 #define BEFORE_EACH(block)                                                     \
     do {                                                                       \
-        assert(test__before_hooks.count < HOOKS_MAX &&                         \
+        assert(test__context.before_hooks.count < TEST_MAX_HOOKS &&            \
                "out of memory for BEFORE_EACH hooks - you can manually "       \
-               "increase HOOKS_MAX");                                          \
-        if (setjmp(test__before_hooks.items[test__before_hooks.count++])) {    \
+               "increase TEST_MAX_HOOKS");                                     \
+        if (setjmp(test__context.before_hooks                                  \
+                       .items[test__context.before_hooks.count++])) {          \
             do block while (0);                                                \
-            longjmp(test__main_context.it_buf, 1);                             \
+            longjmp(test__context.it_buf, 1);                                  \
         }                                                                      \
     } while (0)
 // Run a block of cleanup code after each `IT`.
 #define AFTER_EACH(block)                                                      \
     do {                                                                       \
-        assert(test__after_hooks.count < HOOKS_MAX &&                          \
+        assert(test__context.after_hooks.count < TEST_MAX_HOOKS &&             \
                "out of memory for AFTER_EACH hooks - you can manually "        \
-               "increase HOOKS_MAX");                                          \
-        if (setjmp(test__after_hooks.items[test__after_hooks.count++])) {      \
+               "increase TEST_MAX_HOOKS");                                     \
+        if (setjmp(test__context.after_hooks                                   \
+                       .items[test__context.after_hooks.count++])) {           \
             do block while (0);                                                \
-            longjmp(test__main_context.it_buf, 1);                             \
+            longjmp(test__context.it_buf, 1);                                  \
         }                                                                      \
     } while (0)
 // Declare a test suite to run `IT` tests inside of.
 #define DESCRIBE(message, block)                                               \
     do {                                                                       \
-        const char *describe_label = message;                                  \
-        log_info("BEGIN %s", describe_label);                                  \
-        i32 fails = test__main_context.fails, oks = test__main_context.oks;    \
-        i32 before_hooks = test__before_hooks.count,                           \
-            after_hooks = test__after_hooks.count;                             \
-        test__main_context.describe_level += 1;                                \
+        assert(strlen((message)) < TEST_MAX_LABEL_LENGTH &&                    \
+               "DESCRIBE message too long - you can manually increase "        \
+               "TEST_MAX_LABEL_LENGTH");                                       \
+        test__context.start_fails = test__context.fails;                       \
+        test__context.start_oks = test__context.oks;                           \
+        test__context.start_before_hooks = test__context.before_hooks.count;   \
+        test__context.start_after_hooks = test__context.after_hooks.count;     \
+        test__labels_push(&test__context.describe_labels, message);            \
+        {                                                                      \
+            Lifetime lt = lifetime_begin(test__arena);                         \
+            StringBuilder sb = sb_new(lt.arena, TEST__MAX_RENDERED_LABEL);     \
+            test__labels_render(&sb, test__context.describe_labels);           \
+            log_debug("DESCRIBE: " SB_FMT, SB_ARG(sb));                        \
+            lifetime_end(lt);                                                  \
+        }                                                                      \
         do block while (0);                                                    \
-        test__main_context.describe_level -= 1;                                \
-        test__before_hooks.count = before_hooks;                               \
-        test__after_hooks.count = after_hooks;                                 \
+        test__context.before_hooks.count = test__context.start_before_hooks;   \
+        test__context.after_hooks.count = test__context.start_after_hooks;     \
         LogLevel level;                                                        \
-        if (test__main_context.fails > fails) {                                \
-            test__main_context.any_failed = true;                              \
+        if (test__context.fails > test__context.start_fails) {                 \
             level = LOG_ERROR;                                                 \
         } else {                                                               \
             level = LOG_INFO;                                                  \
         }                                                                      \
-        log_with_level(level, "END %s: %d failed, %d ok", describe_label,      \
-                       test__main_context.fails - fails,                       \
-                       test__main_context.oks - oks);                          \
-        if (test__main_context.describe_level == 0) {                          \
+        {                                                                      \
+            Lifetime lt = lifetime_begin(test__arena);                         \
+            StringBuilder sb = sb_new(lt.arena, TEST__MAX_RENDERED_LABEL);     \
+            test__labels_render(&sb, test__context.describe_labels);           \
+            log_with_level(level, "%s:%d: " SB_FMT ": %d failed, %d ok",       \
+                           __FILE__, __LINE__, SB_ARG(sb),                     \
+                           test__context.fails - test__context.start_fails,    \
+                           test__context.oks - test__context.start_oks);       \
+            lifetime_end(lt);                                                  \
+        }                                                                      \
+        test__labels_pop(&test__context.describe_labels);                      \
+        if (test__context.describe_labels.count == 0) {                        \
             fprintf(stderr, "\n");                                             \
-            test__main_context.fails = fails;                                  \
-            test__main_context.oks = oks;                                      \
+            test__context.fails = test__context.start_fails;                   \
+            test__context.oks = test__context.start_oks;                       \
         }                                                                      \
     } while (0)
 // Define a test to run.
 #define IT(message, block)                                                     \
     do {                                                                       \
-        const char *it_label = message;                                        \
-        i32 before_hooks = test__before_hooks.count;                           \
-        for (i32 i = 0; i < before_hooks; i++) {                               \
-            if (setjmp(test__main_context.it_buf) == 0) {                      \
-                longjmp(test__before_hooks.items[i], 1);                       \
+        for (i32 i = 0; i < test__context.before_hooks.count; i++) {           \
+            if (setjmp(test__context.it_buf) == 0) {                           \
+                longjmp(test__context.before_hooks.items[i], 1);               \
             }                                                                  \
         }                                                                      \
-        if (setjmp(test__main_context.it_buf) == 0) {                          \
-            log_info("BEGIN %s %s", describe_label, it_label);                 \
+        if (setjmp(test__context.it_buf) == 0) {                               \
+            {                                                                  \
+                Lifetime lt = lifetime_begin(test__arena);                     \
+                StringBuilder sb = sb_new(lt.arena, TEST__MAX_RENDERED_LABEL); \
+                test__labels_render_with_it(                                   \
+                    &sb, test__context.describe_labels, (message));            \
+                log_debug("IT: " SB_FMT, SB_ARG(sb));                          \
+                lifetime_end(lt);                                              \
+            }                                                                  \
             do block while (0);                                                \
-            test__main_context.oks += 1;                                       \
-            log_info("END %s %s: ok", describe_label, it_label);               \
+            test__context.oks += 1;                                            \
+            {                                                                  \
+                Lifetime lt = lifetime_begin(test__arena);                     \
+                StringBuilder sb = sb_new(lt.arena, TEST__MAX_RENDERED_LABEL); \
+                test__labels_render_with_it(                                   \
+                    &sb, test__context.describe_labels, (message));            \
+                log_info("%s:%d: " SB_FMT, __FILE__, __LINE__, SB_ARG(sb));    \
+                lifetime_end(lt);                                              \
+            }                                                                  \
         } else {                                                               \
-            test__main_context.fails += 1;                                     \
-            log_error("END %s %s: fail", describe_label, it_label);            \
+            test__context.fails += 1;                                          \
+            {                                                                  \
+                Lifetime lt = lifetime_begin(test__arena);                     \
+                StringBuilder sb = sb_new(lt.arena, TEST__MAX_RENDERED_LABEL); \
+                test__labels_render_with_it(                                   \
+                    &sb, test__context.describe_labels, (message));            \
+                log_error("%s:%d: " SB_FMT, __FILE__, __LINE__, SB_ARG(sb));   \
+                lifetime_end(lt);                                              \
+            }                                                                  \
         }                                                                      \
-        i32 after_hooks = test__after_hooks.count;                             \
-        for (i32 i = after_hooks - 1; i >= 0; i--) {                           \
-            if (setjmp(test__main_context.it_buf) == 0) {                      \
-                longjmp(test__after_hooks.items[i], 1);                        \
+        for (i32 i = test__context.after_hooks.count - 1; i >= 0; i--) {       \
+            if (setjmp(test__context.it_buf) == 0) {                           \
+                longjmp(test__context.after_hooks.items[i], 1);                \
             }                                                                  \
         }                                                                      \
     } while (0)
 // Define a test to run that is expected to fail.
 #define IT_FAIL(message, block)                                                \
     do {                                                                       \
-        test__main_context.should_fail = true;                                 \
-        const char *it_label = message;                                        \
-        i32 before_hooks = test__before_hooks.count;                           \
-        for (i32 i = 0; i < before_hooks; i++) {                               \
-            if (setjmp(test__main_context.it_buf) == 0) {                      \
-                longjmp(test__before_hooks.items[i], 1);                       \
+        test__context.should_fail = true;                                      \
+        for (i32 i = 0; i < test__context.before_hooks.count; i++) {           \
+            if (setjmp(test__context.it_buf) == 0) {                           \
+                longjmp(test__context.before_hooks.items[i], 1);               \
             }                                                                  \
         }                                                                      \
-        if (setjmp(test__main_context.it_buf) == 0) {                          \
-            log_info("BEGIN %s %s", describe_label, it_label);                 \
+        if (setjmp(test__context.it_buf) == 0) {                               \
+            {                                                                  \
+                Lifetime lt = lifetime_begin(test__arena);                     \
+                StringBuilder sb = sb_new(lt.arena, TEST__MAX_RENDERED_LABEL); \
+                test__labels_render_with_it(                                   \
+                    &sb, test__context.describe_labels, (message));            \
+                log_debug("IT_FAIL: " SB_FMT, SB_ARG(sb));                     \
+                lifetime_end(lt);                                              \
+            }                                                                  \
             do block while (0);                                                \
-            test__main_context.fails += 1;                                     \
-            log_error("END %s %s: ok (unexpected)", describe_label, it_label); \
+            test__context.fails += 1;                                          \
+            {                                                                  \
+                Lifetime lt = lifetime_begin(test__arena);                     \
+                StringBuilder sb = sb_new(lt.arena, TEST__MAX_RENDERED_LABEL); \
+                test__labels_render_with_it(                                   \
+                    &sb, test__context.describe_labels, (message));            \
+                log_info("%s:%d: " SB_FMT " (unexpected success)", __FILE__,   \
+                         __LINE__, SB_ARG(sb));                                \
+                lifetime_end(lt);                                              \
+            }                                                                  \
         } else {                                                               \
-            test__main_context.oks += 1;                                       \
-            log_info("END %s %s: fail (expected)", describe_label, it_label);  \
-        }                                                                      \
-        i32 after_hooks = test__after_hooks.count;                             \
-        for (i32 i = after_hooks - 1; i >= 0; i--) {                           \
-            if (setjmp(test__main_context.it_buf) == 0) {                      \
-                longjmp(test__after_hooks.items[i], 1);                        \
+            {                                                                  \
+                Lifetime lt = lifetime_begin(test__arena);                     \
+                StringBuilder sb = sb_new(lt.arena, TEST__MAX_RENDERED_LABEL); \
+                test__labels_render_with_it(                                   \
+                    &sb, test__context.describe_labels, (message));            \
+                log_info("%s:%d: " SB_FMT " (expected failure)", __FILE__,     \
+                         __LINE__, SB_ARG(sb));                                \
+                lifetime_end(lt);                                              \
             }                                                                  \
         }                                                                      \
-        test__main_context.should_fail = false;                                \
+        for (i32 i = test__context.after_hooks.count - 1; i >= 0; i--) {       \
+            if (setjmp(test__context.it_buf) == 0) {                           \
+                longjmp(test__context.after_hooks.items[i], 1);                \
+            }                                                                  \
+        }                                                                      \
+        test__context.should_fail = false;                                     \
     } while (0)
 // Expect a certain condition, with some message in case it fails.
 #define EXPECT(cond, message) EXPECTF(cond, "%s", message)
@@ -246,9 +313,63 @@ struct {
 // Fail a test with some message, using `fmt` and `printf` formatting.
 #define FAILF(fmt, ...)                                                        \
     do {                                                                       \
-        log_with_level(test__main_context.should_fail ? LOG_INFO : LOG_ERROR,  \
+        log_with_level(test__context.should_fail ? LOG_INFO : LOG_ERROR,       \
                        "%s:%d: " fmt, __FILE__, __LINE__, __VA_ARGS__);        \
-        longjmp(test__main_context.it_buf, 1);                                 \
+        longjmp(test__context.it_buf, 1);                                      \
     } while (0)
+
+typedef struct {
+    jmp_buf buf;
+} Test__Hook;
+typedef struct {
+    jmp_buf *items;
+    i32 count;
+} Test__Hooks;
+
+typedef const char *Test__Label;
+ARRAY_TYPEDEF(Test__Label, Test__Labels);
+ARRAY_DECLARE_PREFIX(Test__Label, Test__Labels, test__labels);
+
+typedef struct {
+    jmp_buf it_buf;
+    Test__Hooks before_hooks;
+    Test__Hooks after_hooks;
+    Test__Labels describe_labels;
+    Test__Label it_label;
+    i32 start_before_hooks, start_after_hooks;
+    i32 fails, start_fails, oks, start_oks;
+    bool should_fail;
+} Test__InternalContext;
+
+void test__labels_render(StringBuilder *sb, Test__Labels labels);
+void test__labels_render_with_it(StringBuilder *sb, Test__Labels labels,
+                                 Test__Label it_label);
+
+global Test__InternalContext test__context = {0};
+
+#ifdef BOOKSTORE_IMPLEMENTATION
+
+ARRAY_DEFINE_PREFIX(Test__Label, Test__Labels, test__labels)
+
+void test__expect(bool cond, const char *message) {
+    EXPECT(cond, message);
+}
+
+void test__labels_render(StringBuilder *sb, Test__Labels labels) {
+    i32 label_count = labels.count;
+    for (i32 i = 0; i < label_count; i++) {
+        if (i) sb_push(sb, ' ');
+        sb_append_cstr(sb, test__labels_get(labels, i));
+    }
+}
+
+void test__labels_render_with_it(StringBuilder *sb, Test__Labels labels,
+                                 Test__Label it_label) {
+    test__labels_render(sb, labels);
+    if (labels.count) sb_push(sb, ' ');
+    sb_append_cstr(sb, it_label);
+}
+
+#endif // BOOKSTORE_IMPLEMENTATION
 
 #endif // TEST_H_

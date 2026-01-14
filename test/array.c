@@ -42,7 +42,6 @@ TEST_MAIN({
         IT_FAIL("should respect the array's capacity if using an arena", {
             array arr = array_new(arena, BUF_SIZE);
             for (i32 i = 0; i <= BUF_SIZE; i++) array_push(&arr, i + 1);
-            UNREACHABLE("should have failed earlier");
         });
 
         IT("should increase the array's capacity if dynamic", {
@@ -73,7 +72,6 @@ TEST_MAIN({
             for (i32 i = 0; i <= BUF_SIZE; i++) buf[i] = i + 1;
 
             array_append(&arr, buf, BUF_SIZE + 1);
-            UNREACHABLE("should have failed earlier");
         });
 
         IT("should increase the array's capacity if dynamic", {
@@ -108,7 +106,6 @@ TEST_MAIN({
             for (i32 i = 0; i <= BUF_SIZE; i++) array_push(&other, i + 1);
 
             array_append_other(&arr, other);
-            UNREACHABLE("should have failed earlier");
         });
 
         IT("should increase the array's capacity if dynamic", {
@@ -136,7 +133,6 @@ TEST_MAIN({
             array arr = array_new(arena, BUF_SIZE);
 
             array_get(arr, 0);
-            UNREACHABLE("should have failed earlier");
         });
 
         IT("should respect negative indexes", {
@@ -156,7 +152,6 @@ TEST_MAIN({
         IT_FAIL("should fail if the array is empty", {
             array arr = array_new(arena, BUF_SIZE);
             array_pop(&arr);
-            UNREACHABLE("should have failed earlier");
         });
 
         IT("should return the last element and decrease the count", {

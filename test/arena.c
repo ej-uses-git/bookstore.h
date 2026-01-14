@@ -15,44 +15,40 @@ TEST_MAIN({
         if (arena) arena_destroy(arena);
     });
 
-    DESCRIBE("Arena", {
-        DESCRIBE("arena_alloc", {
-            IT("should allocate memory from the arena", {
-                i32 *buf = arena_alloc(arena, size);
-                buf[0] = 0;
-                buf[1] = 1;
-                buf[2] = 2;
-                buf[3] = 3;
-            });
-
-            IT_FAIL("asserts that the capacity isn't bypassed", {
-                arena_alloc(arena, size + 1);
-                UNREACHABLE("should have failed");
-            });
+    DESCRIBE("arena_alloc", {
+        IT("should allocate memory from the arena", {
+            i32 *buf = arena_alloc(arena, size);
+            buf[0] = 0;
+            buf[1] = 1;
+            buf[2] = 2;
+            buf[3] = 3;
         });
 
-        DESCRIBE("arena_clear", {
-            IT("should reset the arena's allocations", {
-                i32 *buf = arena_alloc(arena, size);
-                buf[0] = 0;
-                buf[1] = 1;
-                buf[2] = 2;
-                buf[3] = 3;
+        IT_FAIL("asserts that the capacity isn't bypassed",
+                { arena_alloc(arena, size + 1); });
+    });
 
-                arena_clear(arena);
-                EXPECT_EQ(arena->allocated, 0, "%d");
+    DESCRIBE("arena_clear", {
+        IT("should reset the arena's allocations", {
+            i32 *buf = arena_alloc(arena, size);
+            buf[0] = 0;
+            buf[1] = 1;
+            buf[2] = 2;
+            buf[3] = 3;
 
-                buf = arena_alloc(arena, size);
-                buf[0] = 0;
-                buf[1] = 1;
-                buf[2] = 2;
-                buf[3] = 3;
-            });
+            arena_clear(arena);
+            EXPECT_EQ(arena->allocated, 0, "%d");
+
+            buf = arena_alloc(arena, size);
+            buf[0] = 0;
+            buf[1] = 1;
+            buf[2] = 2;
+            buf[3] = 3;
         });
     });
 
-    DESCRIBE("Lifetime", {
-        IT("should allow a temporary lifetime to allocate with", {
+    DESCRIBE("lifetime_begin/lifetime_end", {
+        IT("should provide users with a temporary lifetime to allocate with", {
             arena_alloc(arena, 1);
 
             Lifetime lt = lifetime_begin(arena);

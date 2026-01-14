@@ -38,7 +38,6 @@ TEST_MAIN({
         IT_FAIL("should fail if over capacity", {
             Tree t = tree_new(lt.arena, 0);
             tree_insert(lt.arena, &t, random_next());
-            UNREACHABLE("should have failed earlier");
         });
 
         IT("should return false if the value isn't in the tree", {
