@@ -135,7 +135,7 @@ bool build_test(Arena *arena, const char *path, FilePaths dependencies,
     COMMAND_CC_INPUTS(&command, path);
 
     StringBuilder processed =
-        sb_new(lt.arena, basename.count + output_dir.count + 3);
+        sb_new(lt.arena, basename.count + output_dir.count + 4);
     sb_appendf(&output, SV_FMT SYSTEM_PATH_DELIMITER_STRING SV_FMT ".c",
                SV_ARG(output_dir), SV_ARG(basename));
     sb_push_null(&output);
