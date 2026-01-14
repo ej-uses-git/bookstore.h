@@ -46,8 +46,12 @@ void test__expect(bool cond, const char *message);
                       (sizeof(Test__Hook) * TEST_MAX_HOOKS * 2));              \
         test__context.after_hooks.items =                                      \
             arena_alloc(test__arena, TEST_MAX_HOOKS * sizeof(jmp_buf));        \
+        memset(test__context.after_hooks.items, 0,                             \
+               TEST_MAX_HOOKS * sizeof(jmp_buf));                              \
         test__context.before_hooks.items =                                     \
             arena_alloc(test__arena, TEST_MAX_HOOKS * sizeof(jmp_buf));        \
+        memset(test__context.before_hooks.items, 0,                            \
+               TEST_MAX_HOOKS * sizeof(jmp_buf));                              \
         test__context.describe_labels =                                        \
             test__labels_new(test__arena, TEST_MAX_DEPTH);                     \
         do block while (0);                                                    \
