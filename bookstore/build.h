@@ -36,7 +36,7 @@
 
 #ifndef COMMAND_CC_DEBUG_INFO
 #if defined(_MSC_VER) && !defined(__clang__)
-#define COMMAND_CC_DEBUG_INFO(command) COMMAND_APPEND(command, "/Zi")
+#define COMMAND_CC_DEBUG_INFO(command) COMMAND_APPEND(command, "/Zi", "/FS")
 #else
 #define COMMAND_CC_DEBUG_INFO(command) COMMAND_APPEND(command, "-g")
 #endif // defined(_MSC_VER) && !defined(__clang__)
