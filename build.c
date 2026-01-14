@@ -125,6 +125,35 @@ bool build_test(Arena *arena, const char *path, FilePaths dependencies,
 
     Command command = command_new(lt.arena, 32);
 
+#ifdef _WIN32
+    COMMAND_CC(&command);
+
+    COMMAND_CC_FLAGS(&command);
+
+    COMMAND_APPEND(&command, "/EP");
+
+    COMMAND_CC_INPUTS(&command, path);
+
+    StringBuilder processed =
+        sb_new(lt.arena, basename.count + output_dir.count + 3);
+    sb_appendf(&output, SV_FMT SYSTEM_PATH_DELIMITER_STRING SV_FMT ".c",
+               SV_ARG(output_dir), SV_ARG(basename));
+    sb_push_null(&output);
+
+    if (!COMMAND_RUN(arena, &command, .stdout_path = processed.items))
+        DEFER_RETURN(false);
+
+    path = processed.items;
+
+    StringView sv = read_entire_file(lt.arena, processed.items);
+    i32 i = 0;
+    while (sv.count) {
+        i++;
+        StringView line = sv_cut_delimiter(&sv, '\n');
+        printf("%d " SV_FMT "\n", i, SV_ARG(line));
+    }
+#endif // _WIN32
+
     COMMAND_CC(&command);
 
     COMMAND_CC_FLAGS(&command);
