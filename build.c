@@ -184,7 +184,10 @@ bool run_tests_visit(WalkEntry entry) {
     }
 
     if (entry.level == 1) {
-        if (entry.type != FILE_TYPE_REGULAR) DEFER_RETURN(true);
+        if (entry.type != FILE_TYPE_REGULAR ||
+            sv_ends_with(sv_from_cstr(entry.path), sv_from_cstr(".obj"))) {
+            DEFER_RETURN(true);
+        }
 
         Command command = command_new(lt.arena, 1);
         command_push(&command, entry.path);
