@@ -130,6 +130,8 @@ bool build_test(Arena *arena, const char *path, FilePaths dependencies,
 
     COMMAND_CC_FLAGS(&command);
 
+    COMMAND_CC_DEFINE(lt.arena, &command, "BOOKSTORE_IMPLEMENTATION");
+
     COMMAND_APPEND(&command, "/EP");
 
     COMMAND_CC_INPUTS(&command, path);
