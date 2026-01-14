@@ -9,7 +9,9 @@ AANODE_TYPEDEF(i32, Node);
 AATREE_TYPEDEF(Node, Tree);
 AATREE_DECLARE_PREFIX(i32, Node, Tree, tree);
 
+#ifdef BOOKSTORE_IMPLEMENTATION
 AATREE_DEFINE_PREFIX(i32, Node, Tree, tree)
+#endif // BOOKSTORE_IMPLEMENTATION
 
 bool tree_visit(TreeWalkEntry entry) {
     i32 *last = entry.user_data;
