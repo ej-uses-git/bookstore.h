@@ -126,26 +126,103 @@ ARRAY_DECLARE_PREFIX(FilePath, FilePaths, file_paths);
     file_paths_append(paths, (FilePath[]){__VA_ARGS__},                        \
                       sizeof((FilePath[]){__VA_ARGS__}) / sizeof(FilePath))
 
+// Split a `StringView` of a filepath into the base-name (the section after the
+// last path separator) and directory name (the section before it). Returns the
+// `dirname` and updates the parameter to point to the base-name.
 StringView dirname_and_basename(StringView *basename);
+// Get the base-name of a filepath (the section after the last path separator).
+// If you need both the base-name and the directory name, use
+// `dirname_and_basename`.
 StringView get_basename(StringView path);
+// Get the directory name of a filepath (the section before the last path
+// separator). If you need both the base-name and the directory name, use
+// `dirname_and_basename`.
 StringView get_dirname(StringView path);
+// Get the path of the current working directory as a C-string (NUL-terminated
+// list of characters). Uses `arena` to allocate the memory for the string's
+// buffer.
 const char *get_current_directory(Arena *arena);
+// Get the type of the file at `path`. Returns a negative number if the file
+// is invalid or doesn't exist.
 FileType get_file_type(const char *path);
+// Delete the file at `path`.
+//
+// Logs an error and returns `false` if some error occurs.
 bool delete_file(const char *path);
+// Write `contents` into the file at `path`.
+//
+// Logs an error and returns `false` if some error occurs.
 bool write_file(const char *path, StringView contents);
+// Get the position in the file of a `FILE` pointer as an `i64`.
 i64 get_file_position(FILE *f);
+// Read the entirety of the file at `path` into a `StringView`. Uses `arena` to
+// allocate the memory for the string.
+//
+// Logs an error and returns `SV_INVALID`, which has a negative count, in case
+// of an error.
 StringView read_entire_file(Arena *arena, const char *path);
+// Copy the file at `src` into `dest`. Uses `arena` to create a `Lifetime`,
+// which is then used to allocate a temporary buffer for reading chunks from
+// `src` and writing them to `dest`, when not on Windows.
 bool copy_file(Arena *arena, const char *src, const char *dest);
+// Rename the file at `path` to be at `new_path`.
+//
+// Logs an error and returns `false` if some error occurs.
 bool rename_file(const char *path, const char *new_path);
+// Create a directory at `path`. If `fail_if_exists` is `false`, ignores
+// `EEXIST` errors.
+//
+// Logs an error and returns `false` if some error occurs.
 bool make_directory(const char *path, bool fail_if_exists);
+// Create a directory at `path`, recursively creating all necessary parent
+// directories. Uses `arena` to create a `Lifetime`, which is then used to
+// allocate a temporary buffer for separating the path into C-strings
+// (NUL-terminated lists of characters).
+//
+// Logs an error and returns `false` if some error occurs.
 bool make_directory_recursively(Arena *arena, const char *path);
+// Walk the directory `root` and its children, calling `visit` on each one,
+// explicitly specifying the options for initialization as a struct. Uses
+// `arena` to allocate the memory to render the path strings onto, and passes it
+// along to `visit` within each entry so it can make its own allocations easily.
+//
+// Logs an error and returns `false` if some error occurs, or if `visit` returns
+// `false` for any of the entries.
+//
+// You may be looking for `WALK_DIRECTORY`, which allows you to specify only the
+// options you need as named optional arguments.
 bool walk_directory_opt(Arena *arena, const char *root, WalkVisitCallback visit,
                         WalkDirectoryOpt opt);
+// Walk the directory `root` and its children, calling `visit` on each one. Uses
+// `arena` to allocate the memory to render the path strings onto, and passes it
+// along to `visit` within each entry so it can make its own allocations easily.
+//
+// You can pass a named optional argument `user_data` to specify the data passed
+// to the `visit` callback. You can also pass the `post_order` named optional
+// argument to traverse the entries in post-order instead of depth-first, going
+// to the deepest entries first and then back up the tree.
+//
+// Logs an error and returns `false` if some error occurs, or if `visit` returns
+// `false` for any of the entries.
 #define WALK_DIRECTORY(arena, root, cb, ...)                                   \
     walk_directory_opt(arena, root, cb, (WalkDirectoryOpt){__VA_ARGS__})
+// List the files in the directory `path` into `out`. Uses `arena` to allocate
+// the memory for the file paths.
+//
+// Logs an error and returns `false` if some error occurs.
 bool list_directory(Arena *arena, const char *path, FilePaths *out);
+// Recursively copies the contents of the directory `src` to the directory
+// `dest`, creating it if it doesn't exist. Uses `arena` to create a `Lifetime`,
+// which is then used to allocate the memory for file paths and temporary buffer
+// for copying file contents.
+//
+// Logs an error and returns `false` if some error occurs.
 bool copy_directory_recursively(Arena *arena, const char *src,
                                 const char *dest);
+// Deletes the directory `path` and all of its contents. Uses `arena` to create
+// a `Lifetime`, which is then used to allocate the memory for file paths.
+//
+// Logs an error and returns `false` if some error occurs.
 bool delete_directory_recursively(Arena *arena, const char *path);
 
 #ifdef BOOKSTORE_IMPLEMENTATION
@@ -205,11 +282,7 @@ char *system__win32_error_message(DWORD err) {
 #endif // _WIN32
 
 StringView dirname_and_basename(StringView *basename) {
-#ifdef _WIN32
-    return sv_cut_delimiter_end(basename, '\\');
-#else
-    return sv_cut_delimiter_end(basename, '/');
-#endif // _WIN32
+    return sv_cut_delimiter_end(basename, SYSTEM_PATH_DELIMITER);
 }
 
 StringView get_basename(StringView path) {
@@ -469,20 +542,23 @@ bool make_directory_recursively(Arena *arena, const char *path) {
     Lifetime lt = lifetime_begin(arena);
 
     StringView sv = sv_from_cstr(path);
-    const char *cur = NULL;
+    StringBuilder sb = sb_new(lt.arena, sv.count + 1);
 
     while (sv.count) {
-        StringView basename = sv_cut_delimiter(&sv, SYSTEM_PATH_DELIMITER);
+        StringView part = sv_cut_delimiter(&sv, SYSTEM_PATH_DELIMITER);
+        if (!part.count) continue;
 
-        if (cur) {
-            cur = arena_sprintf(lt.arena,
-                                "%s" SYSTEM_PATH_DELIMITER_STRING SV_FMT, cur,
-                                SV_ARG(basename));
+        if (sb.count) {
+            sb_pop(&sb);
+            sb_push(&sb, SYSTEM_PATH_DELIMITER);
+            sb_append_sv(&sb, part);
+            sb_push_null(&sb);
         } else {
-            cur = sv_to_cstr(lt.arena, basename);
+            sb_append_sv(&sb, part);
+            sb_push_null(&sb);
         }
 
-        if (!make_directory(cur, false)) DEFER_RETURN(false);
+        if (!make_directory(sb.items, false)) DEFER_RETURN(false);
     }
 
     DEFER_LABEL({ lifetime_end(lt); });
@@ -534,7 +610,7 @@ bool system__walk_directory_opt_impl(Arena *arena, StringBuilder *path,
 
 #ifdef _WIN32
     Lifetime lt = lifetime_begin(arena);
-    char *buffer = arena_sprintf(arena, "%s\\*", path->items);
+    char *buffer = arena_sprintf(lt.arena, "%s\\*", path->items);
     hFind = FindFirstFile(buffer, &data);
     lifetime_end(lt);
 
