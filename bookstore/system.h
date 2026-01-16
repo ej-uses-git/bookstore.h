@@ -185,6 +185,8 @@ bool make_directory_recursively(Arena *arena, const char *path);
 // explicitly specifying the options for initialization as a struct. Uses
 // `arena` to allocate the memory to render the path strings onto, and passes it
 // along to `visit` within each entry so it can make its own allocations easily.
+// If `visit` doesn't do any allocations, consider using a `Lifetime` so the
+// memory is deallocated after walking is finished.
 //
 // Logs an error and returns `false` if some error occurs, or if `visit` returns
 // `false` for any of the entries.
@@ -196,6 +198,8 @@ bool walk_directory_opt(Arena *arena, const char *root, WalkVisitCallback visit,
 // Walk the directory `root` and its children, calling `visit` on each one. Uses
 // `arena` to allocate the memory to render the path strings onto, and passes it
 // along to `visit` within each entry so it can make its own allocations easily.
+// If `visit` doesn't do any allocations, consider using a `Lifetime` so the
+// memory is deallocated after walking is finished.
 //
 // You can pass a named optional argument `user_data` to specify the data passed
 // to the `visit` callback. You can also pass the `post_order` named optional

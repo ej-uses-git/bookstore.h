@@ -4,52 +4,152 @@
 #ifndef AATREE_H_
 #define AATREE_H_
 
+#include "./arena.h"
 #include "./array.h"
 #include "./basic.h"
 #include <stdbool.h>
 
+#define TEMP__REPLACE_ME 64
+
+// A `typedef` for a struct of a node in an AA tree with values of type `T`.
 #define AANODE_TYPEDEF(T, name)                                                \
     typedef struct name {                                                      \
         i32 left_index, right_index, level;                                    \
         T value;                                                               \
     } name
-
-#define AATREE_FIELDS(TNode) ARRAY_FIELDS(TNode)
-
+// Define the necessary fields for an AA tree with nodes of type `TNode` (which
+// should be defined with `AANODE_TYPEDEF`). Should be placed in a `struct`
+// definition.
+#define AATREE_FIELDS(TNode)                                                   \
+    ARRAY_FIELDS(TNode);                                                       \
+    i32 root_index;                                                            \
+    i32 dangling_index
+// A `typedef` for a struct with only the necessary fields for an AA tree with
+// nodes of type `TNode` (which should be defined with `AANODE_TYPEDEF`), with
+// the name `name`.
 #define AATREE_TYPEDEF(TNode, name)                                            \
     typedef struct name {                                                      \
         AATREE_FIELDS(TNode);                                                  \
-        i32 root_index;                                                        \
-        i32 dangling_index;                                                    \
     } name
-
+// Declare functions for an AA tree with values of type `TValue` and nodes of
+// type `TNode`, named `name`.
+//
+// Prefix all the functions with `name` by default - use `AATREE_DECLARE_PREFIX`
+// to manually supply a prefix.
+//
+// Can be placed in a header file.
 #define AATREE_DECLARE(TValue, TNode, name)                                    \
     AATREE_DECLARE_PREFIX(TValue, TNode, name, name)
-
+// Declare functions and helper types for an AA tree with values of type
+// `TValue` and nodes of type `TNode`, named `name`.
+//
+// Prefix all the functions with `prefix`.
 #define AATREE_DECLARE_PREFIX(TValue, TNode, name, prefix)                     \
+    /* The entry passed to the `visit` callback for `prefix##_walk`. */        \
     typedef struct {                                                           \
+        /*                                                                     \
+         * The arena that was used to allocate the memory for the custom       \
+         * recursion-like loop; can be used to make allocations in the `visit` \
+         * callback itself. If the allocated memory does not need to live      \
+         * beyond the callback, consider using a `Lifetime`.                   \
+         */                                                                    \
+        Arena *arena;                                                          \
+        /* The `user_data` passed to `prefix##_walk`.  */                      \
         void *user_data;                                                       \
+        /* The value of the node being visited. */                             \
         TValue value;                                                          \
     } name##WalkEntry;                                                         \
+    /* The type of the `visit` callback passed to `prefix##_walk`. */          \
     typedef bool (*name##WalkVisitCallback)(name##WalkEntry entry);            \
+    /*                                                                         \
+     * Create a new AA tree with capacity for `capacity` nodes. Uses `arena`   \
+     * to allocate the memory for the tree.                                    \
+     */                                                                        \
     name prefix##_new(Arena *arena, i32 capacity);                             \
+    /*                                                                         \
+     * Insert the value `value` into the tree `self`. Uses `arena` to create a \
+     * `Lifetime`, which is used to allocate the temporary stack for the       \
+     * custom recursion-like loop.                                             \
+     *                                                                         \
+     * If the value is already in the tree, returns `true` and does not        \
+     * reinsert. Otherwise, inserts the value and returns `false`.             \
+     */                                                                        \
     bool prefix##_insert(Arena *arena, name *self, TValue value);              \
+    /*                                                                         \
+     * Delete the value `value` from the tree `self`. Uses `arena` to create a \
+     * `Lifetime`, which is used to allocate the temporary stack for the       \
+     * custom recursion-like loop.                                             \
+     *                                                                         \
+     * If the value is already in the tree, returns `true` and removes it.     \
+     * Otherwise, returns `false` and does not modify the tree.                \
+     */                                                                        \
     bool prefix##_delete(Arena *arena, name *self, TValue value);              \
+    /*                                                                         \
+     * Find the value `value` in the tree `self`. Uses `arena` to create a     \
+     * `Lifetime`, which is used to allocate the temporary stack for the       \
+     * custom recursion-like loop.                                             \
+     *                                                                         \
+     * If the value is in the tree, returns the pointer to it (this is useful  \
+     * for cases where the comparison mechanism isn't a simple `==`, so values \
+     * can be found by some sub-information within the `TValue`). Otherwise,   \
+     * returns `NULL`.                                                         \
+     */                                                                        \
     const TValue *prefix##_find(Arena *arena, name self, TValue value);        \
+    /*                                                                         \
+     * Walk the tree `self` in ascending order, calling `visit` on each of its \
+     * nodes' values, passing `user_data` along to the `visit` callback. Uses  \
+     * `arena` to allocate the temporary stack for the custom recursion-like   \
+     * loop. If `visit` doesn't do any allocations, consider using a           \
+     * `Lifetime` so the memory is deallocated after walking is finished.      \
+     *                                                                         \
+     * Returns `false` if `visit` returns `false` for any of the nodes.        \
+     */                                                                        \
     bool prefix##_walk(Arena *arena, name self, name##WalkVisitCallback visit, \
                        void *user_data)
-
+// Define functions for an AA tree with values of type `TValue` and nodes of
+// type `TNode`, named `name`.
+//
+// Values of type `TValue` will be compared using `COMPARE_BASIC` - use
+// `AATREE_DEFINE_COMPLEX` to manually supply comparison logic.
+//
+// Prefix all functions with `name` by default - use `AATREE_DEFINE_PREFIX` to
+// manually supply a prefix.
+//
+// Companion to `AATREE_DECLARE`.
 #define AATREE_DEFINE(TValue, TNode, name)                                     \
     AATREE_DEFINE_PREFIX(TValue, TNode, name, name)
-
+// Define functions for an AA tree with values of type `TValue` and nodes of
+// type `TNode`, named `name`.
+//
+// Values of type `TValue` will be compared using `COMPARE_BASIC` - use
+// `AATREE_DEFINE_COMPLEX_PREFIX` to manually supply comparison logic.
+//
+// Prefix all the functions with `prefix`.
+//
+// Companion to `AATREE_DECLARE_PREFIX`.
 #define AATREE_DEFINE_PREFIX(TValue, TNode, name, prefix)                      \
     AATREE_DEFINE_COMPLEX_PREFIX(TValue, TNode, COMPARE_BASIC, name, prefix)
-
+// Define functions for an AA tree with values of type `TValue` and nodes of
+// type `TNode`, named `name`.
+//
+// Values of type `TValue` will be compared using `compare`, which should return
+// an `Order`.
+//
+// Prefix all functions with `name` by default - use
+// `AATREE_DEFINE_COMPLEX_PREFIX` to manually supply a prefix.
+//
+// Companion to `AATREE_DEFINE`.
 #define AATREE_DEFINE_COMPLEX(TValue, TNode, compare, name)                    \
     AATREE_DEFINE_COMPLEX_PREFIX(TValue, TNode, compare, name, name)
-
-#define TEMP__REPLACE_ME 64
-
+// Define functions for an AA tree with values of type `TValue` and nodes of
+// type `TNode`, named `name`.
+//
+// Values of type `TValue` will be compared using `compare`, which should return
+// an `Order`.
+//
+// Prefix all functions with `prefix`.
+//
+// Companion to `AATREE_DEFINE_PREFIX`.
 #define AATREE_DEFINE_COMPLEX_PREFIX(TValue, TNode, compare, name, prefix)     \
     ARRAY_DEFINE_PREFIX(TNode, name, name##_)                                  \
     i32 prefix##__skew(name *self, i32 index) {                                \
@@ -258,8 +358,6 @@
     }
 
 #ifdef BOOKSTORE_IMPLEMENTATION
-
-#include "./arena.h"
 
 typedef struct {
     i32 *index;

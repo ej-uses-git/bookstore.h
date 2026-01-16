@@ -20,13 +20,6 @@
     typedef struct name {                                                      \
         SLICE_FIELDS(T);                                                       \
     } name
-#define SLICE_DEBUG(slc, fmt)                                                  \
-    do {                                                                       \
-        log_debug("[");                                                        \
-        for (i32 i = 0; i < (slc).count; i++)                                  \
-            log_debug("  " fmt ",", (slc).data[i]);                            \
-        log_debug("]");                                                        \
-    } while (0)
 // Declare functions for a slice of type `T`, named `name`.
 //
 // Prefix all the functions with `name` by default - use `SLICE_DECLARE_PREFIX`
@@ -36,7 +29,7 @@
 #define SLICE_DECLARE(T, name) SLICE_DECLARE_PREFIX(T, name, name)
 // Declare functions for a slice of type `T`, named `name`.
 //
-// Prefix all the functions with `preifx`.
+// Prefix all the functions with `prefix`.
 //
 // Can be placed in a header file.
 #define SLICE_DECLARE_PREFIX(T, name, prefix)                                  \
@@ -182,7 +175,7 @@
     SLICE_DEFINE_COMPLEX_PREFIX(T, EQ, name, prefix)
 // Define functions for a slice of type `T`, named `name`.
 //
-// Values of type `T` will be compared using `eq`.
+// Values of type `T` will be compared using `eq`, which should return a `bool`.
 //
 // Prefix all the functions with `name` by default - use
 // `SLICE_DEFINE_COMPLEX_PREFIX` to manually supply a prefix.
@@ -192,7 +185,7 @@
     SLICE_DEFINE_COMPLEX_PREFIX(T, name, name)
 // Define functions for a slice of type `T`, named `name`.
 //
-// Values of type `T` will be compared using `eq`.
+// Values of type `T` will be compared using `eq`, which should return a `bool`.
 //
 // Prefix all the functions with `prefix`.
 //
