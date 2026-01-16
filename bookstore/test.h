@@ -215,6 +215,7 @@ void test__expect(bool cond, const char *message);
                          __LINE__, SB_ARG(test__sb));                          \
                 lifetime_end(test__lt);                                        \
             }                                                                  \
+            test__context.oks += 1;                                            \
         }                                                                      \
         for (i32 i = test__context.after_hooks.count - 1; i >= 0; i--) {       \
             if (setjmp(test__context.it_buf) == 0) {                           \
