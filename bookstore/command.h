@@ -32,54 +32,159 @@
 #endif // _WIN32
 
 #ifdef _WIN32
+// A cross-platform process handle.
 typedef HANDLE Process;
+// A cross-platform invalid process handle.
 #define PROCESS_INVALID INVALID_HANDLE_VALUE
 #else
+// A cross-platform process handle.
 typedef int Process;
+// A cross-platform invalid process handle.
 #define PROCESS_INVALID (-1)
 #endif // _WIN32
 
+// A list of process handles, used to group processes and wait on them together.
 ARRAY_TYPEDEF(Process, ProcessList);
 ARRAY_DECLARE_PREFIX(Process, ProcessList, process_list);
 
+// Wait until `proc` finishes.
+//
+// Logs an error and returns `false` if the process exited with a non-success
+// exit code, or if something went wrong getting information about the process.
 bool process_wait(Process proc);
+// Wait until every process in `procs` finishes.
+//
+// Logs an error and returns `false` if `process_wait` returned `false` for any
+// of the processes.
 bool process_list_wait(ProcessList procs);
+// Wait until every process in `procs` finishes, and then empty out `procs`.
+//
+// Logs an error and returns `false` if `process_wait` returned `false` for any
+// of the processes.
 bool process_list_flush(ProcessList *procs);
+// Return the number of processors available on the current machine.
 i32 processors_available(void);
 
 #ifdef _WIN32
+// A cross-platform file descriptor.
 typedef HANDLE FileDescriptor;
+// A cross-platform invalid file descriptor.
 #define FILE_DESCRIPTOR_INVALID INVALID_HANDLE_VALUE
 #else
+// A cross-platform file descriptor.
 typedef int FileDescriptor;
+// A cross-platform invalid file descriptor.
 #define FILE_DESCRIPTOR_INVALID (-1)
 #endif // _WIN32
 
+// Open `path` for reading, returning a file descriptor.
+//
+// Logs an error and returns `FILE_DESCRIPTOR_INVALID` if the file couldn't be
+// opened.
 FileDescriptor fd_open_for_read(const char *path);
+// Open `path` for writing, returning a file descriptor.
+//
+// Logs an error and returns `FILE_DESCRIPTOR_INVALID` if the file couldn't be
+// opened.
 FileDescriptor fd_open_for_write(const char *path);
+// Close a file descriptor.
 void fd_close(FileDescriptor fd);
 
+// A single argument to a command. Also used for the name of the command itself.
 typedef const char *CommandArgument;
+// A command builder, used to create commands which can then be run with
+// `COMMAND_RUN`.
 ARRAY_TYPEDEF(CommandArgument, Command);
 ARRAY_DECLARE_PREFIX(CommandArgument, Command, command);
-
-typedef struct {
-    ProcessList *async;
-    i32 concurrency;
-    const char *stdin_path;
-    const char *stdout_path;
-    const char *stderr_path;
-    bool keep_arguments;
-} CommandRunOpt;
-
-StringView command_render(Arena *arena, Command command);
-bool command_run_opt(Arena *arena, Command *command, CommandRunOpt opt);
-#define COMMAND_RUN(arena, command, ...)                                       \
-    command_run_opt(arena, command, (CommandRunOpt){__VA_ARGS__})
+// Append multiple arguments to a `Command`.
 #define COMMAND_APPEND(command, ...)                                           \
     command_append(command, (CommandArgument[]){__VA_ARGS__},                  \
                    sizeof((CommandArgument[]){__VA_ARGS__}) /                  \
                        sizeof(CommandArgument))
+
+// The struct of possible options to pass to `command_run_opt`, which also act
+// as the named optional arguments to the `COMMAND_RUN` macro.
+typedef struct {
+    // A process list to append the command's process to. If `NULL`, the command
+    // runs synchronously and `COMMAND_RUN` will only return once it is
+    // finished.
+    ProcessList *async;
+    // The maximum amount of processes which can be in `async`. If the size of
+    // `async` is larger than this, waits on processes until there's enough room
+    // to append the given command into the list.
+    //
+    // If `0`, uses `processors_available` to calculate the maximum concurrency.
+    i32 concurrency;
+    // The path to read standard input for this command from. If `NULL`, the
+    // current process' standard input is used.
+    const char *stdin_path;
+    // The path to write standard output for this command to. If `NULL`, the
+    // current process' standard output is used.
+    const char *stdout_path;
+    // The path to write standard error for this command to. If `NULL`, the
+    // current process' standard error is used.
+    const char *stderr_path;
+    // Whether to keep the arguments which are currently in the command. By
+    // default, the command is cleared so it can be reused for building the next
+    // command.
+    bool keep_arguments;
+} CommandRunOpt;
+
+// Render the command into a `StringView`, properly quoting arguments that need
+// it. Used to log debug information before running a command.
+StringView command_render(Arena *arena, Command command);
+// Run the command `command`, explicitly specifying the options for running as a
+// struct. Uses `arena` to allocate memory for quoting on Windows, or for
+// creating a NULL-terminated list of arguments on POSIX, and for rendering the
+// command for debug logs.
+//
+// You may be looking for `COMMAND_RUN`, which allows you to specify only the
+// options you need as named optional arguments.
+bool command_run_opt(Arena *arena, Command *command, CommandRunOpt opt);
+// Run the command `command`. Uses `arena` to allocate memory for quoting on
+// Windows, or for creating a NULL-terminated list of arguments on POSIX, and
+// for rendering the command for debug logs.
+//
+// You can pass the following named optional arguments to specify additional
+// configuration for running the command:
+//
+// - `async` - specify a list of processes to append the process to, instead of
+// running synchronously
+//
+// ```
+// ProcessList procs = process_list_new(arena, capacity);
+// if (!COMMAND_RUN(arena, command, .async = &procs)) fail();
+// if (!process_list_wait(procs)) fail();
+// ```
+//
+// - `concurrency` - specify the maximum concurrency for running commands
+// asynchronously
+//
+// ```
+// ProcessList procs = process_list_new(arena, capacity);
+// if (!COMMAND_RUN(arena, command, .async = &procs, .concurrency = 10)) fail();
+// if (!process_list_wait(procs)) fail();
+// ```
+//
+// - `stdin_path`, `stdout_path`, and `stderr_path` - specify files to use for
+// the standard streams of the command
+//
+// ```
+// if (!COMMAND_RUN(arena, command,
+//                  .stdin_path = "input.txt",
+//                  .stdout_path = "output.txt",
+//                  .stderr_path = "error.txt")) fail();
+// ```
+//
+// - `keep_arguments` - keep the arguments in `command` instead of clearing it
+//
+// ```
+// if (!COMMAND_RUN(arena, command, .keep_arguments = true)) fail();
+// // Rerun the same command as above
+// if (!COMMAND_RUN(arena, command)) fail();
+// ```
+#define COMMAND_RUN(arena, command, ...)                                       \
+    command_run_opt(arena, command, (CommandRunOpt){__VA_ARGS__})
 
 #ifdef BOOKSTORE_IMPLEMENTATION
 
