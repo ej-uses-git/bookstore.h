@@ -23,7 +23,7 @@ TEST_MAIN({
 
         IT("should manually allocate when passed NULL", {
             array arr = array_new(NULL, -1);
-            EXPECT_NE((void *)arr.items, NULL, "%p");
+            EXPECT_NON_NULL(arr.items);
             free(arr.items);
         });
     });
