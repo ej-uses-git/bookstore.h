@@ -156,7 +156,8 @@
             self->items =                                                      \
                 (T *)REALLOC(self->items, capacity * sizeof(*self->items));    \
         } else {                                                               \
-            ASSERT(self->capacity >= amount, "array at full capacity");        \
+            ASSERT(self->capacity >= amount,                                   \
+                   MACRO_STRING(name) " at full capacity");                    \
         }                                                                      \
     }                                                                          \
     void prefix##_push(name *self, T item) {                                   \

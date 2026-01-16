@@ -9,6 +9,11 @@
 #include <stdint.h>
 #include <stdio.h>
 
+// Macro helpers
+
+// Quote an argument to a macro as a string
+#define MACRO_STRING(x) #x
+
 // `static`-related definitions
 
 // Mark a variable as global.

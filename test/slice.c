@@ -6,12 +6,12 @@
 
 #define BUF_SIZE 10
 
-SLICE_TYPEDEF(i32, slice);
-SLICE_DEFINE(i32, slice)
+SLICE_TYPEDEF(i32, Slice);
+SLICE_DEFINE_PREFIX(i32, Slice, slice)
 
 TEST_MAIN({
     i32 buf[BUF_SIZE];
-    slice slc;
+    Slice slc;
 
     BEFORE_EACH({
         for (i32 i = 0; i < BUF_SIZE; i++) buf[i] = i + 1;
@@ -67,7 +67,7 @@ TEST_MAIN({
 
     DESCRIBE("slice_strip_start", {
         i32 strip_size = BUF_SIZE / 2;
-        slice stripped;
+        Slice stripped;
 
         BEFORE_EACH({ stripped = slice_strip_start(&slc, strip_size); });
 
@@ -88,7 +88,7 @@ TEST_MAIN({
 
     DESCRIBE("slice_strip_end", {
         i32 strip_size = BUF_SIZE / 2;
-        slice stripped;
+        Slice stripped;
 
         BEFORE_EACH({ stripped = slice_strip_end(&slc, strip_size); });
 
@@ -108,7 +108,7 @@ TEST_MAIN({
     });
 
     DESCRIBE("slice_cut_delimiter_end", {
-        slice before;
+        Slice before;
         i32 target = 5;
         i32 expected_before_count;
         i32 expected_slc_count;
