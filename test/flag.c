@@ -13,8 +13,9 @@ const char *flag_error_display(FlagError error) {
     case FLAG_ERROR_NO_VALUE:         return "FLAG_ERROR_NO_VALUE";
     case FLAG_ERROR_INVALID_NUMBER:   return "FLAG_ERROR_INVALID_NUMBER";
     case FLAG_ERROR_INTEGER_OVERFLOW: return "FLAG_ERROR_INTEGER_OVERFLOW";
-    case FLAG_ERROR_FLOAT_OVERFLOW:   return "FLAG_ERROR_FLOAT_OVERFLOW"; break;
+    case FLAG_ERROR_FLOAT_OVERFLOW:   return "FLAG_ERROR_FLOAT_OVERFLOW";
     }
+    UNREACHABLE("FlagError");
 }
 
 const float epsilon = 0.0001;
