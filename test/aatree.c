@@ -3,6 +3,7 @@
 #include "../bookstore/aatree.h"
 #include "../bookstore/random.h"
 
+#include <stdint.h>
 #include <time.h>
 
 AANODE_TYPEDEF(i32, Node);
@@ -31,7 +32,8 @@ TEST_MAIN({
         lt = lifetime_begin(arena);
 
         int rounds = 5;
-        random_seed(time(NULL) ^ (intptr_t)&printf, (intptr_t)&rounds);
+        random_seed(&rng_global, time(NULL) ^ (intptr_t)&printf,
+                    (intptr_t)&rounds);
     });
 
     AFTER_EACH({ lifetime_end(lt); });
@@ -39,24 +41,25 @@ TEST_MAIN({
     DESCRIBE("tree_insert", {
         IT_FAIL("should fail if over capacity", {
             Tree t = tree_new(lt.arena, 0);
-            tree_insert(lt.arena, &t, random_next());
+            tree_insert(lt.arena, &t, random_next_i32(&rng_global));
         });
 
         IT("should return false if the value isn't in the tree", {
             Tree t = tree_new(lt.arena, 1);
-            EXPECT_FALSE(tree_insert(lt.arena, &t, random_next()));
+            EXPECT_FALSE(
+                tree_insert(lt.arena, &t, random_next_i32(&rng_global)));
         });
 
         IT("should insert the value into the tree", {
             Tree t = tree_new(lt.arena, 1);
-            i32 value = random_next();
+            i32 value = random_next_i32(&rng_global);
             tree_insert(lt.arena, &t, value);
             EXPECT_NON_NULL(tree_find(lt.arena, t, value));
         });
 
         IT("should return true if the value is the tree", {
             Tree t = tree_new(lt.arena, 2);
-            i32 value = random_next();
+            i32 value = random_next_i32(&rng_global);
             tree_insert(lt.arena, &t, value);
             EXPECT_TRUE(tree_insert(lt.arena, &t, value));
         });
@@ -65,24 +68,25 @@ TEST_MAIN({
     DESCRIBE("tree_delete", {
         IT("should return false if the value isn't in the tree", {
             Tree t = tree_new(lt.arena, 0);
-            EXPECT_FALSE(tree_delete(lt.arena, &t, random_next()));
+            EXPECT_FALSE(
+                tree_delete(lt.arena, &t, random_next_i32(&rng_global)));
         });
 
         IT("should return true if the value is in the tree", {
             Tree t = tree_new(lt.arena, 1);
-            i32 value = random_next();
+            i32 value = random_next_i32(&rng_global);
             tree_insert(lt.arena, &t, value);
             EXPECT_NON_NULL(tree_delete(lt.arena, &t, value));
         });
 
         IT("should remove the value from the tree", {
-            i32 count = random_next_bounded(64) + 1;
+            i32 count = random_next_i32_ranged(&rng_global, 1, 64);
 
             Tree t = tree_new(lt.arena, count);
             for (i32 i = 0; i < count - 1; i++)
-                tree_insert(lt.arena, &t, random_next());
+                tree_insert(lt.arena, &t, random_next_i32(&rng_global));
 
-            i32 value = random_next();
+            i32 value = random_next_i32(&rng_global);
             tree_insert(lt.arena, &t, value);
             tree_delete(lt.arena, &t, value);
             EXPECT_NULL(tree_find(lt.arena, t, value));
@@ -92,12 +96,12 @@ TEST_MAIN({
     DESCRIBE("tree_find", {
         IT("should return NULL if the value isn't in the tree", {
             Tree t = tree_new(lt.arena, 0);
-            EXPECT_NULL(tree_find(lt.arena, t, random_next()));
+            EXPECT_NULL(tree_find(lt.arena, t, random_next_i32(&rng_global)));
         });
 
         IT("should return a pointer to the value if it is in the tree", {
             Tree t = tree_new(lt.arena, 1);
-            i32 value = random_next();
+            i32 value = random_next_i32(&rng_global);
             tree_insert(lt.arena, &t, value);
             EXPECT_NON_NULL(tree_find(lt.arena, t, value));
         });
@@ -105,14 +109,14 @@ TEST_MAIN({
 
     DESCRIBE("tree_walk", {
         IT("should traverse the values in order", {
-            i32 count = random_next_bounded(64) + 1;
+            i32 count = random_next_i32_ranged(&rng_global, 1, 64);
 
             Tree t = tree_new(lt.arena, count);
 
             for (i32 i = 0; i < count; i++)
-                tree_insert(lt.arena, &t, random_next());
+                tree_insert(lt.arena, &t, random_next_i32(&rng_global));
 
-            i32 min = 0;
+            i32 min = INT32_MIN;
             tree_walk(lt.arena, t, tree_visit, &min);
         });
     });
