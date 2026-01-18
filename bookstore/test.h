@@ -36,6 +36,25 @@ void test__expect(bool cond, const char *message);
 
 #define TEST__MAX_RENDERED_LABEL (TEST_MAX_LABEL_LENGTH * (TEST_MAX_DEPTH + 2))
 
+#define TEST__DESCRIBE_LOG(_arena, _sb, _level, ...)                           \
+    do {                                                                       \
+        Lifetime test__lt = lifetime_begin(_arena);                            \
+        StringBuilder _sb = sb_new(test__lt.arena, TEST__MAX_RENDERED_LABEL);  \
+        test__labels_render(&_sb, test__context.describe_labels);              \
+        log_with_level(_level, __VA_ARGS__);                                   \
+        lifetime_end(test__lt);                                                \
+    } while (0)
+
+#define TEST__IT_LOG(_arena, _sb, _message, _level, ...)                       \
+    do {                                                                       \
+        Lifetime test__lt = lifetime_begin(_arena);                            \
+        StringBuilder _sb = sb_new(test__lt.arena, TEST__MAX_RENDERED_LABEL);  \
+        test__labels_render_with_it(&_sb, test__context.describe_labels,       \
+                                    _message);                                 \
+        log_with_level(_level, __VA_ARGS__);                                   \
+        lifetime_end(test__lt);                                                \
+    } while (0)
+
 // Define the entry point for a test program, instead of using `int main(...)`.
 // Does the necessary setup and cleanup for the other test-related macros.
 #define TEST_MAIN(block)                                                       \
@@ -89,34 +108,22 @@ void test__expect(bool cond, const char *message);
         test__context.start_before_hooks = test__context.before_hooks.count;   \
         test__context.start_after_hooks = test__context.after_hooks.count;     \
         test__labels_push(&test__context.describe_labels, message);            \
-        {                                                                      \
-            Lifetime test__lt = lifetime_begin(test__arena);                   \
-            StringBuilder test__sb =                                           \
-                sb_new(test__lt.arena, TEST__MAX_RENDERED_LABEL);              \
-            test__labels_render(&test__sb, test__context.describe_labels);     \
-            log_debug("DESCRIBE: " SB_FMT, SB_ARG(test__sb));                  \
-            lifetime_end(test__lt);                                            \
-        }                                                                      \
+        TEST__DESCRIBE_LOG(test__arena, test__sb, LOG_DEBUG,                   \
+                           "DESCRIBE: " SB_FMT, SB_ARG(test__sb));             \
         do block while (0);                                                    \
         test__context.before_hooks.count = test__context.start_before_hooks;   \
         test__context.after_hooks.count = test__context.start_after_hooks;     \
-        LogLevel level;                                                        \
+        LogLevel test__log_level;                                              \
         if (test__context.fails > test__context.start_fails) {                 \
-            level = LOG_ERROR;                                                 \
+            test__log_level = LOG_ERROR;                                       \
         } else {                                                               \
-            level = LOG_INFO;                                                  \
+            test__log_level = LOG_INFO;                                        \
         }                                                                      \
-        {                                                                      \
-            Lifetime test__lt = lifetime_begin(test__arena);                   \
-            StringBuilder test__sb =                                           \
-                sb_new(test__lt.arena, TEST__MAX_RENDERED_LABEL);              \
-            test__labels_render(&test__sb, test__context.describe_labels);     \
-            log_with_level(level, "%s:%d: " SB_FMT ": %d failed, %d ok",       \
-                           __FILE__, __LINE__, SB_ARG(test__sb),               \
+        TEST__DESCRIBE_LOG(test__arena, test__sb, test__log_level,             \
+                           "%s:%d: " SB_FMT ": %d failed, %d ok", __FILE__,    \
+                           __LINE__, SB_ARG(test__sb),                         \
                            test__context.fails - test__context.start_fails,    \
                            test__context.oks - test__context.start_oks);       \
-            lifetime_end(test__lt);                                            \
-        }                                                                      \
         test__labels_pop(&test__context.describe_labels);                      \
         if (test__context.describe_labels.count == 0) {                        \
             fprintf(stderr, "\n");                                             \
@@ -133,39 +140,18 @@ void test__expect(bool cond, const char *message);
             }                                                                  \
         }                                                                      \
         if (setjmp(test__context.it_buf) == 0) {                               \
-            {                                                                  \
-                Lifetime test__lt = lifetime_begin(test__arena);               \
-                StringBuilder test__sb =                                       \
-                    sb_new(test__lt.arena, TEST__MAX_RENDERED_LABEL);          \
-                test__labels_render_with_it(                                   \
-                    &test__sb, test__context.describe_labels, (message));      \
-                log_debug("IT: " SB_FMT, SB_ARG(test__sb));                    \
-                lifetime_end(test__lt);                                        \
-            }                                                                  \
+            TEST__IT_LOG(test__arena, test__sb, message, LOG_DEBUG,            \
+                         "IT: " SB_FMT, SB_ARG(test__sb));                     \
             do block while (0);                                                \
             test__context.oks += 1;                                            \
-            {                                                                  \
-                Lifetime test__lt = lifetime_begin(test__arena);               \
-                StringBuilder test__sb =                                       \
-                    sb_new(test__lt.arena, TEST__MAX_RENDERED_LABEL);          \
-                test__labels_render_with_it(                                   \
-                    &test__sb, test__context.describe_labels, (message));      \
-                log_info("%s:%d: " SB_FMT, __FILE__, __LINE__,                 \
+            TEST__IT_LOG(test__arena, test__sb, message, LOG_INFO,             \
+                         "%s:%d: " SB_FMT, __FILE__, __LINE__,                 \
                          SB_ARG(test__sb));                                    \
-                lifetime_end(test__lt);                                        \
-            }                                                                  \
         } else {                                                               \
             test__context.fails += 1;                                          \
-            {                                                                  \
-                Lifetime test__lt = lifetime_begin(test__arena);               \
-                StringBuilder test__sb =                                       \
-                    sb_new(test__lt.arena, TEST__MAX_RENDERED_LABEL);          \
-                test__labels_render_with_it(                                   \
-                    &test__sb, test__context.describe_labels, (message));      \
-                log_error("%s:%d: " SB_FMT, __FILE__, __LINE__,                \
-                          SB_ARG(test__sb));                                   \
-                lifetime_end(test__lt);                                        \
-            }                                                                  \
+            TEST__IT_LOG(test__arena, test__sb, message, LOG_ERROR,            \
+                         "%s:%d: " SB_FMT, __FILE__, __LINE__,                 \
+                         SB_ARG(test__sb));                                    \
         }                                                                      \
         for (i32 i = test__context.after_hooks.count - 1; i >= 0; i--) {       \
             if (setjmp(test__context.it_buf) == 0) {                           \
@@ -183,39 +169,18 @@ void test__expect(bool cond, const char *message);
             }                                                                  \
         }                                                                      \
         if (setjmp(test__context.it_buf) == 0) {                               \
-            {                                                                  \
-                Lifetime test__lt = lifetime_begin(test__arena);               \
-                StringBuilder test__sb =                                       \
-                    sb_new(test__lt.arena, TEST__MAX_RENDERED_LABEL);          \
-                test__labels_render_with_it(                                   \
-                    &test__sb, test__context.describe_labels, (message));      \
-                log_debug("IT_FAIL: " SB_FMT, SB_ARG(test__sb));               \
-                lifetime_end(test__lt);                                        \
-            }                                                                  \
+            TEST__IT_LOG(test__arena, test__sb, message, LOG_DEBUG,            \
+                         "IT_FAIL: " SB_FMT, SB_ARG(test__sb));                \
             do block while (0);                                                \
             test__context.fails += 1;                                          \
-            {                                                                  \
-                Lifetime test__lt = lifetime_begin(test__arena);               \
-                StringBuilder test__sb =                                       \
-                    sb_new(test__lt.arena, TEST__MAX_RENDERED_LABEL);          \
-                test__labels_render_with_it(                                   \
-                    &test__sb, test__context.describe_labels, (message));      \
-                log_info("%s:%d: " SB_FMT " (unexpected success)", __FILE__,   \
+            TEST__IT_LOG(test__arena, test__sb, message, LOG_ERROR,            \
+                         "%s:%d: " SB_FMT " (unexpected success)", __FILE__,   \
                          __LINE__, SB_ARG(test__sb));                          \
-                lifetime_end(test__lt);                                        \
-            }                                                                  \
         } else {                                                               \
-            {                                                                  \
-                Lifetime test__lt = lifetime_begin(test__arena);               \
-                StringBuilder test__sb =                                       \
-                    sb_new(test__lt.arena, TEST__MAX_RENDERED_LABEL);          \
-                test__labels_render_with_it(                                   \
-                    &test__sb, test__context.describe_labels, (message));      \
-                log_info("%s:%d: " SB_FMT " (expected failure)", __FILE__,     \
-                         __LINE__, SB_ARG(test__sb));                          \
-                lifetime_end(test__lt);                                        \
-            }                                                                  \
             test__context.oks += 1;                                            \
+            TEST__IT_LOG(test__arena, test__sb, message, LOG_INFO,             \
+                         "%s:%d: " SB_FMT " (expected failure)", __FILE__,     \
+                         __LINE__, SB_ARG(test__sb));                          \
         }                                                                      \
         for (i32 i = test__context.after_hooks.count - 1; i >= 0; i--) {       \
             if (setjmp(test__context.it_buf) == 0) {                           \
