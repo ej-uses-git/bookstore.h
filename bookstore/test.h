@@ -65,7 +65,7 @@ void test__expect(bool cond, const char *message);
         test__context.describe_labels =                                        \
             test__labels_new(test__arena, TEST_MAX_DEPTH);                     \
         do block while (0);                                                    \
-        if (test__context.fails > 0) {                                         \
+        if (test__context.any_failed) {                                        \
             log_error("tests failed");                                         \
             return 1;                                                          \
         } else {                                                               \
@@ -149,6 +149,7 @@ void test__expect(bool cond, const char *message);
                          SB_ARG(test__sb));                                    \
         } else {                                                               \
             test__context.fails += 1;                                          \
+            test__context.any_failed = true;                                   \
             TEST__IT_LOG(test__arena, test__sb, message, LOG_ERROR,            \
                          "%s:%d: " SB_FMT, __FILE__, __LINE__,                 \
                          SB_ARG(test__sb));                                    \
@@ -173,6 +174,7 @@ void test__expect(bool cond, const char *message);
                          "IT_FAIL: " SB_FMT, SB_ARG(test__sb));                \
             do block while (0);                                                \
             test__context.fails += 1;                                          \
+            test__context.any_failed = true;                                   \
             TEST__IT_LOG(test__arena, test__sb, message, LOG_ERROR,            \
                          "%s:%d: " SB_FMT " (unexpected success)", __FILE__,   \
                          __LINE__, SB_ARG(test__sb));                          \
@@ -306,7 +308,7 @@ typedef struct {
     Test__Label it_label;
     i32 start_before_hooks, start_after_hooks;
     i32 fails, start_fails, oks, start_oks;
-    bool should_fail;
+    bool any_failed, should_fail;
 } Test__InternalContext;
 
 void test__labels_render(StringBuilder *test__sb, Test__Labels labels);
