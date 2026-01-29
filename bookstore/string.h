@@ -225,12 +225,14 @@ void sv_trim(StringView *self) {
 }
 
 void sv_trim_start(StringView *self) {
+    if (!self->count) return;
     while (isspace(sv_get(*self, 0))) {
         sv_shift(self);
     }
 }
 
 void sv_trim_end(StringView *self) {
+    if (!self->count) return;
     while (isspace(sv_get(*self, -1))) {
         sv_pop(self);
     }
