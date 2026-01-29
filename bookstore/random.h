@@ -142,7 +142,7 @@ char random_next_upper(Random *rng);
 char random_next_alpha(Random *rng);
 // Get a random `char` from a `Random` instance, advancing the state.
 // Limit the returned character to be a digit.
-char random_next_number(Random *rng);
+char random_next_digit(Random *rng);
 // Get a random `char` from a `Random` instance, advancing the state.
 // Limit the returned character to be and alphabetical letter or a numeric
 // digit.
@@ -294,7 +294,7 @@ char random_next_alpha(Random *rng) {
     return RANDOM_NEXT_CHAR_MULTI_RANGED(rng, 'a', 'z', 'A', 'Z');
 }
 
-char random_next_number(Random *rng) {
+char random_next_digit(Random *rng) {
     return random_next_char_ranged(rng, '0', '9');
 }
 

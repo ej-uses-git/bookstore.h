@@ -97,6 +97,6 @@ TEST_MAIN({
     DESCRIBE_NEXT_CHAR_KIND(lower, "a", "lowercase");
     DESCRIBE_NEXT_CHAR_KIND(upper, "an", "uppercase");
     DESCRIBE_NEXT_CHAR_KIND(alpha, "an", "alphabetic");
-    DESCRIBE_NEXT_CHAR_KIND(number, "a", "numeric");
+    DESCRIBE_NEXT_CHAR_KIND(digit, "a", "numeric");
     DESCRIBE_NEXT_CHAR_KIND(alnum, "an", "alphanumeric");
 })
