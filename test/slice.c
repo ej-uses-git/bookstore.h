@@ -2,83 +2,97 @@
 
 #include "../bookstore/slice.h"
 
-#define EXPECT_EQ_D(a, b) EXPECT_EQ(a, b, "%d")
-
-#define BUF_SIZE 10
+#define EXPECT_EQ_D(a, b) EXPECT_EQ(a, b, I32_FMT)
 
 SLICE_TYPEDEF(i32, Slice);
 SLICE_DEFINE_PREFIX(i32, Slice, slice)
 
-TEST_MAIN({
-    i32 buf[BUF_SIZE];
-    Slice slc;
+#define CAPACITY (KiB(2) * sizeof(i32))
 
-    BEFORE_EACH({
-        for (i32 i = 0; i < BUF_SIZE; i++) buf[i] = i + 1;
-        slc = slice_from_parts(buf, BUF_SIZE);
-    });
+#define SETUP(rng)                                                             \
+    i32 buf_size =                                                             \
+        random_next_u32_bounded(&rng, (CAPACITY / sizeof(i32)) - 1) + 1;       \
+    i32 *buf = arena_alloc(arena, buf_size * sizeof(i32));                     \
+    for (i32 i = 0; i < buf_size; i++) buf[i] = random_next_i32(&rng);         \
+    Slice slice = slice_from_parts(buf, buf_size)
+
+#define BUF_AND_SLICE_PROP(message, buf, slice, block, ...)                    \
+    PROP(message, rng, {                                                       \
+        i32 buf##_size =                                                       \
+            random_next_u32_bounded(&rng, (CAPACITY / sizeof(i32)) - 1) + 1;   \
+        i32 *buf = arena_alloc(arena, buf##_size * sizeof(i32));               \
+        for (i32 i = 0; i < buf_size; i++) buf[i] = random_next_i32(&rng);     \
+        Slice slice = slice_from_parts(buf, buf##_size);                       \
+        do block while (0);                                                    \
+    })
+
+TEST_MAIN({
+    Arena *arena = arena_new(CAPACITY);
+
+    BEFORE_EACH({ arena_clear(arena); });
 
     DESCRIBE("slice_get", {
-        IT("should return the item at the given index", {
-            for (i32 i = 0; i < BUF_SIZE; i++) {
-                EXPECT_EQ_D(slice_get(slc, i), buf[i]);
+        BUF_AND_SLICE_PROP("should return the given index's item", buf, slice, {
+            for (i32 i = 0; i < buf_size; i++) {
+                EXPECT_EQ_D(slice_get(slice, i), buf[i]);
             }
         });
 
-        IT("should respect negative indexes", {
-            for (i32 i = BUF_SIZE - 1; i >= 0; i--) {
-                i32 index = i - BUF_SIZE;
-                EXPECT_EQ_D(slice_get(slc, index), buf[i]);
+        BUF_AND_SLICE_PROP("should respect negative indexes", buf, slice, {
+            for (i32 i = buf_size - 1; i >= 0; i--) {
+                i32 index = i - buf_size;
+                EXPECT_EQ_D(slice_get(slice, index), buf[i]);
             }
         });
     });
 
     DESCRIBE("slice_shift", {
-        IT("should decrease the count by one", {
-            i32 count = slc.count;
-            slice_shift(&slc);
-            EXPECT_EQ_D(slc.count, count - 1);
+        BUF_AND_SLICE_PROP("should decrease the count by one", buf, slice, {
+            i32 count = slice.count;
+            slice_shift(&slice);
+            EXPECT_EQ_D(slice.count, count - 1);
         });
 
-        IT("should modify where the slice starts", {
-            slice_shift(&slc);
-            for (i32 i = 0; i < slc.count; i++) {
-                EXPECT_EQ_D(slice_get(slc, i), buf[i + 1]);
+        BUF_AND_SLICE_PROP("should modify where the slice starts", buf, slice, {
+            slice_shift(&slice);
+            for (i32 i = 0; i < slice.count; i++) {
+                EXPECT_EQ_D(slice_get(slice, i), buf[i + 1]);
             }
         });
 
-        IT("should return the first element", {
-            i32 chopped = slice_shift(&slc);
+        BUF_AND_SLICE_PROP("should return the first element", buf, slice, {
+            i32 chopped = slice_shift(&slice);
             EXPECT_EQ_D(chopped, buf[0]);
         });
     });
 
     DESCRIBE("slice_pop", {
-        IT("should decrease the count by one", {
-            slice_pop(&slc);
-            EXPECT_EQ_D(slc.count, BUF_SIZE - 1);
+        BUF_AND_SLICE_PROP("should decrease the count by one", buf, slice, {
+            slice_pop(&slice);
+            EXPECT_EQ_D(slice.count, buf_size - 1);
         });
 
-        IT("should return the last element", {
-            i32 chopped = slice_pop(&slc);
-            EXPECT_EQ_D(chopped, buf[BUF_SIZE - 1]);
+        BUF_AND_SLICE_PROP("should return the last element", buf, slice, {
+            i32 chopped = slice_pop(&slice);
+            EXPECT_EQ_D(chopped, buf[buf_size - 1]);
         });
     });
 
     DESCRIBE("slice_strip_start", {
-        i32 strip_size = BUF_SIZE / 2;
-        Slice stripped;
+        BUF_AND_SLICE_PROP("should modify the original slice", buf, slice, {
+            i32 strip_size = random_next_u32_bounded(&rng, buf_size);
+            slice_strip_start(&slice, strip_size);
 
-        BEFORE_EACH({ stripped = slice_strip_start(&slc, strip_size); });
-
-        IT("should modify the original slice", {
-            EXPECT_EQ_D(slc.count, BUF_SIZE - strip_size);
-            for (i32 i = 0; i < slc.count; i++) {
-                EXPECT_EQ_D(slice_get(slc, i), buf[i + strip_size]);
+            EXPECT_EQ_D(slice.count, buf_size - strip_size);
+            for (i32 i = 0; i < slice.count; i++) {
+                EXPECT_EQ_D(slice_get(slice, i), buf[i + strip_size]);
             }
         });
 
-        IT("should create a new slice with the stripped data", {
+        BUF_AND_SLICE_PROP("should return the stripped data", buf, slice, {
+            i32 strip_size = random_next_u32_bounded(&rng, buf_size);
+            Slice stripped = slice_strip_start(&slice, strip_size);
+
             EXPECT_EQ_D(stripped.count, strip_size);
             for (i32 i = 0; i < stripped.count; i++) {
                 EXPECT_EQ_D(slice_get(stripped, i), buf[i]);
@@ -87,54 +101,57 @@ TEST_MAIN({
     });
 
     DESCRIBE("slice_strip_end", {
-        i32 strip_size = BUF_SIZE / 2;
-        Slice stripped;
+        BUF_AND_SLICE_PROP("should modify the original slice", buf, slice, {
+            i32 strip_size = random_next_u32_bounded(&rng, buf_size);
+            slice_strip_end(&slice, strip_size);
 
-        BEFORE_EACH({ stripped = slice_strip_end(&slc, strip_size); });
-
-        IT("should modify the original slice", {
-            EXPECT_EQ_D(slc.count, BUF_SIZE - strip_size);
-            for (i32 i = 0; i < slc.count; i++) {
-                EXPECT_EQ_D(slice_get(slc, i), buf[i]);
+            EXPECT_EQ_D(slice.count, buf_size - strip_size);
+            for (i32 i = 0; i < slice.count; i++) {
+                EXPECT_EQ_D(slice_get(slice, i), buf[i]);
             }
         });
 
-        IT("should create a new slice with the stripped data", {
+        BUF_AND_SLICE_PROP("should return the stripped data", buf, slice, {
+            i32 strip_size = random_next_u32_bounded(&rng, buf_size);
+            Slice stripped = slice_strip_end(&slice, strip_size);
+
             EXPECT_EQ_D(stripped.count, strip_size);
             for (i32 i = 0; i < stripped.count; i++) {
-                EXPECT_EQ_D(slice_get(stripped, i), buf[i + strip_size]);
+                EXPECT_EQ_D(slice_get(stripped, i), buf[i + slice.count]);
             }
         });
     });
 
     DESCRIBE("slice_cut_delimiter_end", {
-        Slice before;
-        i32 target = 5;
-        i32 expected_before_count;
-        i32 expected_slc_count;
+        BUF_AND_SLICE_PROP(
+            "should modify the original to point after the delimiter", buf,
+            slice, {
+                i32 target = random_next_i32(&rng);
+                i32 target_index = slice_index_of(slice, target);
+                i32 expected_slice_count =
+                    target_index < 0 ? 0 : slice.count - target_index - 1;
+                Slice before = slice_cut_delimiter_end(&slice, target);
 
-        BEFORE_EACH({
-            i32 target_index = slice_index_of(slc, target);
-            expected_before_count = target_index < 0 ? slc.count : target_index;
-            expected_slc_count =
-                target_index < 0 ? 0 : slc.count - target_index - 1;
-            before = slice_cut_delimiter_end(&slc, target);
-        });
+                EXPECT_LT(slice_index_of(slice, target), 0, I32_FMT);
+                EXPECT_EQ_D(slice.count, expected_slice_count);
+                for (i32 i = 0; i < slice.count; i++) {
+                    EXPECT_EQ_D(slice_get(slice, i), buf[i + before.count + 1]);
+                }
+            });
 
-        IT("should modify the original slice to point after the delimiter", {
-            EXPECT_LT(slice_index_of(slc, target), 0, "%d");
-            EXPECT_EQ_D(slc.count, expected_slc_count);
-            for (i32 i = 0; i < slc.count; i++) {
-                EXPECT_EQ_D(slice_get(slc, i), buf[i + before.count + 1]);
-            }
-        });
+        BUF_AND_SLICE_PROP(
+            "should return the data before the delimiter", buf, slice, {
+                i32 target = random_next_i32(&rng);
+                i32 target_index = slice_index_of(slice, target);
+                i32 expected_before_count =
+                    target_index < 0 ? slice.count : target_index;
+                Slice before = slice_cut_delimiter_end(&slice, target);
 
-        IT("should create a new slice to point before the delimiter", {
-            EXPECT_LT(slice_index_of(before, target), 0, "%d");
-            EXPECT_EQ_D(before.count, expected_before_count);
-            for (i32 i = 0; i < before.count; i++) {
-                EXPECT_EQ_D(slice_get(before, i), buf[i]);
-            }
-        });
+                EXPECT_LT(slice_index_of(before, target), 0, I32_FMT);
+                EXPECT_EQ_D(before.count, expected_before_count);
+                for (i32 i = 0; i < before.count; i++) {
+                    EXPECT_EQ_D(slice_get(before, i), buf[i]);
+                }
+            });
     });
 })
