@@ -129,6 +129,9 @@ char random_next_char_multi_ranged(Random *rng, char *range_table,
 // Limit the returned character to the ASCII character range.
 char random_next_ascii(Random *rng);
 // Get a random `char` from a `Random` instance, advancing the state.
+// Limit the returned character to be a printable ASCII character.
+char random_next_print(Random *rng);
+// Get a random `char` from a `Random` instance, advancing the state.
 // Limit the returned character to be a lowercase alphabetical letter.
 char random_next_lower(Random *rng);
 // Get a random `char` from a `Random` instance, advancing the state.
@@ -138,8 +141,8 @@ char random_next_upper(Random *rng);
 // Limit the returned character to be an alphabetical letter.
 char random_next_alpha(Random *rng);
 // Get a random `char` from a `Random` instance, advancing the state.
-// Limit the returned character to be a numeric digit.
-char random_next_numeric(Random *rng);
+// Limit the returned character to be a digit.
+char random_next_number(Random *rng);
 // Get a random `char` from a `Random` instance, advancing the state.
 // Limit the returned character to be and alphabetical letter or a numeric
 // digit.
@@ -272,7 +275,11 @@ char random_next_char_multi_ranged(Random *rng, char *range_table,
 }
 
 char random_next_ascii(Random *rng) {
-    return random_next_char_ranged(rng, ' ', '~');
+    return random_next_char_ranged(rng, 0, 0177);
+}
+
+char random_next_print(Random *rng) {
+    return random_next_char_ranged(rng, 040, 0176);
 }
 
 char random_next_lower(Random *rng) {
@@ -287,7 +294,7 @@ char random_next_alpha(Random *rng) {
     return RANDOM_NEXT_CHAR_MULTI_RANGED(rng, 'a', 'z', 'A', 'Z');
 }
 
-char random_next_numeric(Random *rng) {
+char random_next_number(Random *rng) {
     return random_next_char_ranged(rng, '0', '9');
 }
 
