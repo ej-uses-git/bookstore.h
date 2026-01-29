@@ -17,9 +17,11 @@ void test__expect(bool cond, const char *message);
 
 #include "./array.h"
 #include "./basic.h"
+#include "./random.h"
 #include "./string.h"
 #include <assert.h>
 #include <setjmp.h>
+#include <time.h>
 
 // Maximum `BEFORE_EACH` and `AFTER_EACH` hooks to have active at once.
 #ifndef TEST_MAX_HOOKS
@@ -64,6 +66,7 @@ void test__expect(bool cond, const char *message);
                       TEST__MAX_RENDERED_LABEL);                               \
         test__context.describe_labels =                                        \
             test__labels_new(test__arena, TEST_MAX_DEPTH);                     \
+        test__context.failure_log_level = LOG_ERROR;                           \
         do block while (0);                                                    \
         if (test__context.any_failed) {                                        \
             log_error("tests failed");                                         \
@@ -160,10 +163,70 @@ void test__expect(bool cond, const char *message);
             }                                                                  \
         }                                                                      \
     } while (0)
+typedef struct {
+    i32 runs;
+    struct {
+        u64 initstate, initseq;
+    } seed;
+} PropOpt;
+#define PROP(message, rng_name, block, ...)                                    \
+    do {                                                                       \
+        PropOpt test__opt = {__VA_ARGS__};                                     \
+        Random test__setup_rng;                                                \
+        random_seed(&test__setup_rng, time(NULL) ^ (intptr_t)&printf,          \
+                    (intptr_t)&test__opt);                                     \
+        i32 test__runs = test__opt.runs ? test__opt.runs : 100;                \
+        TEST__IT_LOG(test__arena, test__sb, message, LOG_DEBUG,                \
+                     "PROP: " SB_FMT, SB_ARG(test__sb));                       \
+        bool test__failed = false;                                             \
+        for (i32 test__run = 0; test__run < test__runs; test__run++) {         \
+            /* TODO: next_u64 instead? */                                      \
+            u64 test__initstate = test__opt.seed.initstate ?                   \
+                test__opt.seed.initstate :                                     \
+                random_next_u32(&test__setup_rng);                             \
+            u64 test__initseq = test__opt.seed.initseq ?                       \
+                test__opt.seed.initseq :                                       \
+                random_next_u32(&test__setup_rng);                             \
+            Random rng_name;                                                   \
+            random_seed(&rng_name, test__initstate, test__initseq);            \
+            for (i32 i = 0; i < test__context.before_hooks.count; i++) {       \
+                if (setjmp(test__context.it_buf) == 0) {                       \
+                    longjmp(test__context.before_hooks.items[i], 1);           \
+                }                                                              \
+            }                                                                  \
+            if (setjmp(test__context.it_buf) == 0) {                           \
+                do block while (0);                                            \
+            } else {                                                           \
+                test__failed = true;                                           \
+                test__context.fails += 1;                                      \
+                test__context.any_failed = true;                               \
+                TEST__IT_LOG(test__arena, test__sb, message, LOG_ERROR,        \
+                             "%s:%d: " SB_FMT, __FILE__, __LINE__,             \
+                             SB_ARG(test__sb));                                \
+                log_error("To reproduce this issue, add the following to "     \
+                          "your PROP block:");                                 \
+                log_error("  .seed = {" U64_FMT "ULL," U64_FMT                 \
+                          "ULL}, .runs = 1",                                   \
+                          test__initstate, test__initseq);                     \
+                break;                                                         \
+            }                                                                  \
+            for (i32 i = test__context.after_hooks.count - 1; i >= 0; i--) {   \
+                if (setjmp(test__context.it_buf) == 0) {                       \
+                    longjmp(test__context.after_hooks.items[i], 1);            \
+                }                                                              \
+            }                                                                  \
+        }                                                                      \
+        if (!test__failed) {                                                   \
+            test__context.oks += 1;                                            \
+            TEST__IT_LOG(test__arena, test__sb, message, LOG_INFO,             \
+                         "%s:%d: " SB_FMT, __FILE__, __LINE__,                 \
+                         SB_ARG(test__sb));                                    \
+        }                                                                      \
+    } while (0)
 // Define a test to run that is expected to fail.
 #define IT_FAIL(message, block)                                                \
     do {                                                                       \
-        test__context.should_fail = true;                                      \
+        test__context.failure_log_level = LOG_INFO;                            \
         for (i32 i = 0; i < test__context.before_hooks.count; i++) {           \
             if (setjmp(test__context.it_buf) == 0) {                           \
                 longjmp(test__context.before_hooks.items[i], 1);               \
@@ -189,7 +252,62 @@ void test__expect(bool cond, const char *message);
                 longjmp(test__context.after_hooks.items[i], 1);                \
             }                                                                  \
         }                                                                      \
-        test__context.should_fail = false;                                     \
+        test__context.failure_log_level = LOG_ERROR;                           \
+    } while (0)
+#define PROP_FAIL(message, rng_name, block, ...)                               \
+    do {                                                                       \
+        test__context.failure_log_level = LOG_DEBUG;                           \
+        PropOpt test__opt = {__VA_ARGS__};                                     \
+        Random test__setup_rng;                                                \
+        random_seed(&test__setup_rng, time(NULL) ^ (intptr_t)&printf,          \
+                    (intptr_t)&test__opt);                                     \
+        i32 test__runs = test__opt.runs ? test__opt.runs : 100;                \
+        TEST__IT_LOG(test__arena, test__sb, message, LOG_DEBUG,                \
+                     "PROP: " SB_FMT, SB_ARG(test__sb));                       \
+        bool test__ok = false;                                                 \
+        for (i32 test__run = 0; test__run < test__runs; test__run++) {         \
+            /* TODO: next_u64 instead? */                                      \
+            u64 test__initstate = test__opt.seed.initstate ?                   \
+                test__opt.seed.initstate :                                     \
+                random_next_u32(&test__setup_rng);                             \
+            u64 test__initseq = test__opt.seed.initseq ?                       \
+                test__opt.seed.initseq :                                       \
+                random_next_u32(&test__setup_rng);                             \
+            Random rng_name;                                                   \
+            random_seed(&rng_name, test__initstate, test__initseq);            \
+            for (i32 i = 0; i < test__context.before_hooks.count; i++) {       \
+                if (setjmp(test__context.it_buf) == 0) {                       \
+                    longjmp(test__context.before_hooks.items[i], 1);           \
+                }                                                              \
+            }                                                                  \
+            if (setjmp(test__context.it_buf) == 0) {                           \
+                do block while (0);                                            \
+                test__ok = true;                                               \
+                test__context.fails += 1;                                      \
+                test__context.any_failed = true;                               \
+                TEST__IT_LOG(test__arena, test__sb, message, LOG_ERROR,        \
+                             "%s:%d: " SB_FMT " (unexpected success)",         \
+                             __FILE__, __LINE__, SB_ARG(test__sb));            \
+                log_error("To reproduce this issue, add the following to "     \
+                          "your PROP_FAIL block:");                            \
+                log_error("  .seed = {" U64_FMT "ULL," U64_FMT                 \
+                          "ULL}, .runs = 1",                                   \
+                          test__initstate, test__initseq);                     \
+                break;                                                         \
+            }                                                                  \
+            for (i32 i = test__context.after_hooks.count - 1; i >= 0; i--) {   \
+                if (setjmp(test__context.it_buf) == 0) {                       \
+                    longjmp(test__context.after_hooks.items[i], 1);            \
+                }                                                              \
+            }                                                                  \
+        }                                                                      \
+        if (!test__ok) {                                                       \
+            test__context.oks += 1;                                            \
+            TEST__IT_LOG(test__arena, test__sb, message, LOG_INFO,             \
+                         "%s:%d: " SB_FMT " (expected failure)", __FILE__,     \
+                         __LINE__, SB_ARG(test__sb));                          \
+        }                                                                      \
+        test__context.failure_log_level = LOG_ERROR;                           \
     } while (0)
 // Expect a certain condition, with some message in case it fails.
 #define EXPECT(cond, message) EXPECTF(cond, "%s", message)
@@ -286,8 +404,8 @@ void test__expect(bool cond, const char *message);
 // Fail a test with some message, using `fmt` and `printf` formatting.
 #define FAILF(fmt, ...)                                                        \
     do {                                                                       \
-        log_with_level(test__context.should_fail ? LOG_INFO : LOG_ERROR,       \
-                       "%s:%d: " fmt, __FILE__, __LINE__, __VA_ARGS__);        \
+        log_with_level(test__context.failure_log_level, "%s:%d: " fmt,         \
+                       __FILE__, __LINE__, __VA_ARGS__);                       \
         longjmp(test__context.it_buf, 1);                                      \
     } while (0)
 
@@ -308,7 +426,8 @@ typedef struct {
     Test__Label it_label;
     i32 start_before_hooks, start_after_hooks;
     i32 fails, start_fails, oks, start_oks;
-    bool any_failed, should_fail;
+    bool any_failed;
+    LogLevel failure_log_level;
 } Test__InternalContext;
 
 void test__labels_render(StringBuilder *test__sb, Test__Labels labels);
