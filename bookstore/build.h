@@ -239,7 +239,7 @@ void build__self_rebuild(Arena *arena, int argc, const char **argv,
     StringView binary_path = args_shift(&args);
 
 #ifdef _WIN32
-    if (!sv_ends_with(binary_path, sv_from_cstr(".exe"))) {
+    if (!sv_ends_with(binary_path, SV_FROM_LITERAL(".exe"))) {
         binary_path = sv_printf(arena, SV_FMT ".exe", SV_ARG(binary_path));
     }
 #endif // _WIN32

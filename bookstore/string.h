@@ -29,8 +29,12 @@ SLICE_DECLARE_PREFIX(char, StringView, sv);
 // ```
 #define SV_ARG(sv) (int)(sv).count, (sv).data
 // An empty `StringView`.
-#define SV_EMPTY   (StringView){0}
+#define SV_EMPTY (StringView){0}
+// An invalid `StringView`, returned from functions to mark an error.
+// Its `count` is negative.
 #define SV_INVALID (StringView){.data = NULL, .count = -1}
+#define SV_FROM_LITERAL(literal)                                               \
+    (StringView){.data = "" literal "", .count = sizeof(literal) - 1}
 // Create a `StringView` from a C-string (NUL-terminated list of characters).
 StringView sv_from_cstr(const char *cstr);
 // Copy over a `StringView` to a C-string (NUL-terminated list of characters),

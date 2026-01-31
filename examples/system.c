@@ -166,7 +166,7 @@ bool list_directory_command(Arena *arena, Args args) {
 
     StringView *directory =
         FLAG_STRING("-directory",
-                    {._default = sv_from_cstr("."),
+                    {._default = SV_FROM_LITERAL("."),
                      .ctx = command_ctx,
                      .description = "The directory to list the contents of."});
     set_help_and_debug(command_ctx);

@@ -77,17 +77,17 @@ int main(int argc, const char **argv) {
         return 1;
     }
 
-    if (args_index_of(args, sv_from_cstr("clean")) >= 0) {
+    if (args_index_of(args, SV_FROM_LITERAL("clean")) >= 0) {
         if (!delete_directory_recursively(arena, BIN_DIR)) return 1;
     }
 
     FilePaths tests = file_paths_new(arena, 64);
     list_directory(arena, TEST_INPUT_DIR, &tests);
 
-    if (args_index_of(args, sv_from_cstr("build")) >= 0) {
+    if (args_index_of(args, SV_FROM_LITERAL("build")) >= 0) {
         if (!build_tests(arena, tests, dependencies)) return 1;
     }
-    if (args_index_of(args, sv_from_cstr("test")) >= 0) {
+    if (args_index_of(args, SV_FROM_LITERAL("test")) >= 0) {
         if (!run_tests(arena, tests)) return 1;
     }
 
@@ -108,7 +108,7 @@ bool build_test(Arena *arena, const char *path, FilePaths dependencies,
     StringView output_dir = sv_from_cstr(TEST_OUTPUT_DIR);
 
     StringView basename = get_basename(sv_from_cstr(path));
-    sv_strip_suffix(&basename, sv_from_cstr(".c"));
+    sv_strip_suffix(&basename, SV_FROM_LITERAL(".c"));
 
     StringBuilder output =
         sb_new(lt.arena, basename.count + output_dir.count + 2);
@@ -167,7 +167,7 @@ bool run_test(Arena *arena, const char *path) {
     StringView output_dir = sv_from_cstr(TEST_OUTPUT_DIR);
 
     StringView basename = get_basename(sv_from_cstr(path));
-    sv_strip_suffix(&basename, sv_from_cstr(".c"));
+    sv_strip_suffix(&basename, SV_FROM_LITERAL(".c"));
 
 #ifdef _WIN32
     i32 executable_length = basename.count + output_dir.count + 6;

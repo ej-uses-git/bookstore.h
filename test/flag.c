@@ -43,7 +43,7 @@ TEST_MAIN({
 
         BEFORE_EACH({
             FLAG_INIT(arena);
-            FLAG_SET_PROGRAM_NAME(sv_from_cstr("program_name"));
+            FLAG_SET_PROGRAM_NAME(SV_FROM_LITERAL("program_name"));
         });
 
         DESCRIBE("boolean flags", {
@@ -160,7 +160,7 @@ TEST_MAIN({
             });
 
             IT("should parse from the next argument", {
-                args = ARGS_FROM_LIST(sv_from_cstr("-" FLAG),
+                args = ARGS_FROM_LIST(SV_FROM_LITERAL("-" FLAG),
                                       sv_printf(arena, U64_FMT, value));
                 EXPECT_PARSE(arena, args);
                 EXPECT_EQ(flag, value, U64_FMT);
@@ -209,7 +209,7 @@ TEST_MAIN({
             });
 
             IT("should parse from the next argument", {
-                args = ARGS_FROM_LIST(sv_from_cstr("-" FLAG),
+                args = ARGS_FROM_LIST(SV_FROM_LITERAL("-" FLAG),
                                       sv_printf(arena, "%f", value));
                 EXPECT_PARSE(arena, args);
                 EXPECT_EQ_FN(flag, value, float_eq, "%f", IDENTITY);
