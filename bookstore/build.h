@@ -101,8 +101,9 @@ typedef struct {
 bool command_compile_flags_txt_opt(Arena *arena, Command *command,
                                    CommandCompileFlagsTxtOpt opt);
 #define COMMAND_COMPILE_FLAGS_TXT(arena, command, ...)                         \
-    command_compile_flags_txt_opt(arena, command,                              \
-                                  (CommandCompileFlagsTxtOpt){__VA_ARGS__})
+    command_compile_flags_txt_opt(                                             \
+        arena, command,                                                        \
+        (WRAPPER(CommandCompileFlagsTxtOpt){__VA_ARGS__}).wrapper)
 
 i8 build_needs_rebuild(const char *output_path, FilePaths input_paths);
 void build__self_rebuild(Arena *arena, int argc, const char **argv,
