@@ -68,14 +68,14 @@ typedef enum {
     WALK_STOP,
 } WalkAction;
 
-// The entry passed to the `visit` callback for `WALK_DIRECTORY`.
+// The entry passed to the `visit` callback for `DIRECTORY_WALK`.
 typedef struct {
     // The arena that was used to allocate information about this entry; can be
     // used to make allocations in the `visit` callback itself. If the allocated
     // memory does not need to live beyond the callback, consider using a
     // `Lifetime`.
     Arena *arena;
-    // The `user_data` passed to `WALK_DIRECTORY`.
+    // The `user_data` passed to `DIRECTORY_WALK`.
     void *user_data;
     // The path of the entry, as a C-string (NUL-terminated list of characters).
     const char *path;
@@ -91,10 +91,10 @@ typedef struct {
     // Whether this is the first entry of this `level` to be visited for this
     // directory.
     bool first;
-} WalkEntry;
+} DirectoryWalkEntry;
 
-// The struct of possible options to pass to `walk_directory_opt`, which also
-// act as the named optional arguments to the `WALK_DIRECTORY` macro.
+// The struct of possible options to pass to `directory_walk_opt`, which also
+// act as the named optional arguments to the `DIRECTORY_WALK` macro.
 typedef struct {
     // Pointer to data which will be passed along to the `visit` callback.
     void *user_data;
@@ -102,10 +102,10 @@ typedef struct {
     // deepest nodes and then back up, instead of starting with the shallowest
     // nodes.
     bool post_order;
-} WalkDirectoryOpt;
+} DirectoryWalkOpt;
 
-// The type of the `visit` callback passed to `WALK_DIRECTORY`.
-typedef bool (*WalkVisitCallback)(WalkEntry entry);
+// The type of the `visit` callback passed to `DIRECTORY_WALK`.
+typedef bool (*DirectoryWalkVisitCallback)(DirectoryWalkEntry entry);
 
 // A filepath, which is just a C-string (NUL-terminated list of characters).
 typedef const char *FilePath;
@@ -191,10 +191,10 @@ bool make_directory_recursively(Arena *arena, const char *path);
 // Logs an error and returns `false` if some error occurs, or if `visit` returns
 // `false` for any of the entries.
 //
-// You may be looking for `WALK_DIRECTORY`, which allows you to specify only the
+// You may be looking for `DIRECTORY_WALK`, which allows you to specify only the
 // options you need as named optional arguments.
-bool walk_directory_opt(Arena *arena, const char *root, WalkVisitCallback visit,
-                        WalkDirectoryOpt opt);
+bool directory_walk_opt(Arena *arena, const char *root,
+                        DirectoryWalkVisitCallback visit, DirectoryWalkOpt opt);
 // Walk the directory `root` and its children, calling `visit` on each one. Uses
 // `arena` to allocate the memory to render the path strings onto, and passes it
 // along to `visit` within each entry so it can make its own allocations easily.
@@ -208,9 +208,9 @@ bool walk_directory_opt(Arena *arena, const char *root, WalkVisitCallback visit,
 //
 // Logs an error and returns `false` if some error occurs, or if `visit` returns
 // `false` for any of the entries.
-#define WALK_DIRECTORY(arena, root, cb, ...)                                   \
-    walk_directory_opt(arena, root, cb,                                        \
-                       (WRAPPER(WalkDirectoryOpt){__VA_ARGS__}).wrapper)
+#define DIRECTORY_WALK(arena, root, cb, ...)                                   \
+    directory_walk_opt(arena, root, cb,                                        \
+                       (WRAPPER(DirectoryWalkOpt){__VA_ARGS__}).wrapper)
 // List the files in the directory `path` into `out`. Uses `arena` to allocate
 // the memory for the file paths.
 //
@@ -571,9 +571,9 @@ bool make_directory_recursively(Arena *arena, const char *path) {
 
 // NOTE: `path` here has a NUL character at the end of it, so `path->items` can
 // be used as a C-string.
-bool system__walk_directory_opt_impl(Arena *arena, StringBuilder *path,
-                                     WalkVisitCallback visit,
-                                     WalkDirectoryOpt opt, u32 level,
+bool system__directory_walk_opt_impl(Arena *arena, StringBuilder *path,
+                                     DirectoryWalkVisitCallback visit,
+                                     DirectoryWalkOpt opt, u32 level,
                                      bool *stop, bool first_on_level) {
     DEFER_SETUP(bool, true);
 
@@ -588,7 +588,7 @@ bool system__walk_directory_opt_impl(Arena *arena, StringBuilder *path,
     if (type < 0) DEFER_RETURN(false);
 
     WalkAction action = WALK_CONT;
-    WalkEntry entry = {
+    DirectoryWalkEntry entry = {
         .arena = arena,
         .user_data = opt.user_data,
         .path = path->items,
@@ -656,7 +656,7 @@ bool system__walk_directory_opt_impl(Arena *arena, StringBuilder *path,
                 sb_push(path, SYSTEM_PATH_DELIMITER);
             sb_append(path, name, name_length);
             sb_push_null(path);
-            if (!system__walk_directory_opt_impl(arena, path, visit, opt,
+            if (!system__directory_walk_opt_impl(arena, path, visit, opt,
                                                  level + 1, stop, first)) {
                 DEFER_RETURN(false);
             }
@@ -702,21 +702,22 @@ bool system__walk_directory_opt_impl(Arena *arena, StringBuilder *path,
 #endif // _WIN32
 }
 
-bool walk_directory_opt(Arena *arena, const char *root, WalkVisitCallback visit,
-                        WalkDirectoryOpt opt) {
+bool directory_walk_opt(Arena *arena, const char *root,
+                        DirectoryWalkVisitCallback visit,
+                        DirectoryWalkOpt opt) {
     bool stop = false;
 
     StringBuilder path = sb_new(arena, SYSTEM_PATH_MAX);
     sb_append_cstr(&path, root);
     sb_push_null(&path);
 
-    bool result = system__walk_directory_opt_impl(arena, &path, visit, opt, 0,
+    bool result = system__directory_walk_opt_impl(arena, &path, visit, opt, 0,
                                                   &stop, true);
 
     return result;
 }
 
-bool system__list_directory_visit(WalkEntry entry) {
+bool system__list_directory_visit(DirectoryWalkEntry entry) {
     if (entry.level == 1) {
         FilePaths *paths = entry.user_data;
         file_paths_push(paths, arena_clone_cstr(entry.arena, entry.path));
@@ -727,7 +728,7 @@ bool system__list_directory_visit(WalkEntry entry) {
 }
 
 bool list_directory(Arena *arena, const char *path, FilePaths *out) {
-    return WALK_DIRECTORY(arena, path, system__list_directory_visit,
+    return DIRECTORY_WALK(arena, path, system__list_directory_visit,
                           {.user_data = out});
 }
 
@@ -736,7 +737,7 @@ typedef struct {
     const char *dest;
 } System__CopyDirectoryRecursivelyData;
 
-bool system__copy_directory_recursively_visit(WalkEntry entry) {
+bool system__copy_directory_recursively_visit(DirectoryWalkEntry entry) {
     DEFER_SETUP(bool, true);
 
     System__CopyDirectoryRecursivelyData *data = entry.user_data;
@@ -777,20 +778,20 @@ bool copy_directory_recursively(Arena *arena, const char *src,
     Lifetime lt = lifetime_begin(arena);
     System__CopyDirectoryRecursivelyData user_data = {.dest = dest, .src = src};
     bool result =
-        WALK_DIRECTORY(lt.arena, src, system__copy_directory_recursively_visit,
+        DIRECTORY_WALK(lt.arena, src, system__copy_directory_recursively_visit,
                        {.user_data = &user_data});
     lifetime_end(lt);
     return result;
 }
 
-bool system__delete_directory_recursively_visit(WalkEntry entry) {
+bool system__delete_directory_recursively_visit(DirectoryWalkEntry entry) {
     return delete_file(entry.path);
 }
 
 bool delete_directory_recursively(Arena *arena, const char *path) {
     Lifetime lt = lifetime_begin(arena);
     bool result =
-        WALK_DIRECTORY(arena, path, system__delete_directory_recursively_visit,
+        DIRECTORY_WALK(arena, path, system__delete_directory_recursively_visit,
                        {.post_order = true});
     lifetime_end(lt);
     return result;

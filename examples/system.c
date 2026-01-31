@@ -151,7 +151,7 @@ void list_directory_usage(FILE *stream) {
     FLAG_PRINT_OPTIONS(stream, {.ctx = command_ctx});
 }
 
-bool list_directory_visit(WalkEntry entry) {
+bool list_directory_visit(DirectoryWalkEntry entry) {
     if (entry.level == 1) {
         if (!entry.first) printf(" ");
         printf("%s", entry.path);
