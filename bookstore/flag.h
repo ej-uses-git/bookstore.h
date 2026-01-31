@@ -101,20 +101,13 @@ typedef enum {
         T _default;                                                            \
     } name
 
-// The struct of possible options to pass to `flag_bool_opt`, which also act as
-// the named optional arguments to the `FLAG_BOOL` macro.
+// The struct of possible options to pass to `FLAG_BOOL`.
 FLAG__OPT_TYPEDEF(bool, FlagBoolOpt);
-// Construct a boolean flag with name `name`, explicitly specifying the options
-// for initialization as a struct. Returns the pointer to the flag's value.
-//
-// You may be looking for `FLAG_BOOL`, which allows you to specify only the
-// options you need as named optional arguments.
-bool *flag_bool_opt(const char *name, FlagBoolOpt opt);
 // Construct a boolean flag with name `name`. Returns the pointer to the flag's
 // value (this will be equal to the `var` option if you pass it).
 //
-// You can pass the following named optional arguments to specify additional
-// information about the flag:
+// You can pass the following options to specify additional information about
+// the flag:
 //
 // - `description` - override the description used for `FLAG_PRINT_OPTIONS`
 //
@@ -149,21 +142,15 @@ bool *flag_bool_opt(const char *name, FlagBoolOpt opt);
 //   ```
 #define FLAG_BOOL(name, ...)                                                   \
     flag_bool_opt(name, (WRAPPER(FlagBoolOpt){__VA_ARGS__}).wrapper)
+bool *flag_bool_opt(const char *name, FlagBoolOpt opt);
 
-// The struct of possible options to pass to `flag_string_opt`, which also act
-// as the named optional arguments to the `FLAG_STRING` macro.
+// The struct of possible options to pass to `FLAG_STRING`.
 FLAG__OPT_TYPEDEF(StringView, FlagStringOpt);
-// Construct a string flag with name `name`, explicitly specifying the options
-// for initialization as a struct. Returns the pointer to the flag's value.
-//
-// You may be looking for `FLAG_STRING`, which allows you to specify only the
-// options you need as named optional arguments.
-StringView *flag_string_opt(const char *name, FlagStringOpt opt);
 // Construct a string flag with name `name`. Returns the pointer to the flag's
 // value (this will be equal to the `var` option if you pass it).
 //
-// You can pass the following named optional arguments to specify additional
-// information about the flag:
+// You can pass the following options to specify additional information about
+// the flag:
 //
 // - `description` - override the description used for `FLAG_PRINT_OPTIONS`
 //
@@ -198,22 +185,15 @@ StringView *flag_string_opt(const char *name, FlagStringOpt opt);
 //   ```
 #define FLAG_STRING(name, ...)                                                 \
     flag_string_opt(name, (WRAPPER(FlagStringOpt){__VA_ARGS__}).wrapper)
+StringView *flag_string_opt(const char *name, FlagStringOpt opt);
 
-// The struct of possible options to pass to `flag_u64_opt`, which also act as
-// the named optional arguments to the `FLAG_U64` macro.
+// The struct of possible options to pass to `FLAG_U64`.
 FLAG__OPT_TYPEDEF(u64, FlagU64Opt);
-// Construct an unsigned integer flag with name `name`, explicitly specifying
-// the options for initialization as a struct. Returns the pointer to the flag's
-// value.
-//
-// You may be looking for `FLAG_U64`, which allows you to specify only the
-// options you need as named optional arguments.
-u64 *flag_u64_opt(const char *name, FlagU64Opt opt);
 // Construct an unsigned integer flag with name `name`. Returns the pointer to
 // the flag's value (this will be equal to the `var` option if you pass it).
 //
-// You can pass the following named optional arguments to specify additional
-// information about the flag:
+// You can pass the following options to specify additional information about
+// the flag:
 //
 // - `description` - override the description used for `FLAG_PRINT_OPTIONS`
 //
@@ -248,15 +228,14 @@ u64 *flag_u64_opt(const char *name, FlagU64Opt opt);
 //   ```
 #define FLAG_U64(name, ...)                                                    \
     flag_u64_opt(name, (WRAPPER(FlagU64Opt){__VA_ARGS__}).wrapper)
+u64 *flag_u64_opt(const char *name, FlagU64Opt opt);
 
-// The struct of possible options to pass to `flag_float_opt`, which also act
-// as the named optional arguments to the `FLAG_FLOAT` macro.
+// The struct of possible options to pass to `FLAG_FLOAT`.
 FLAG__OPT_TYPEDEF(float, FlagFloatOpt);
-float *flag_float_opt(const char *name, FlagFloatOpt opt);
 // Construct a floating point flag with name `name`. Returns the pointer to the
 // flag's value (this will be equal to the `var` option if you pass it).
 //
-// You can pass the following named optional arguments to specify additional
+// You can pass the following options to specify additional
 // information about the flag:
 //
 // - `description` - override the description used for `FLAG_PRINT_OPTIONS`
@@ -293,6 +272,7 @@ float *flag_float_opt(const char *name, FlagFloatOpt opt);
 //   ```
 #define FLAG_FLOAT(name, ...)                                                  \
     flag_float_opt(name, (WRAPPER(FlagFloatOpt){__VA_ARGS__}).wrapper)
+float *flag_float_opt(const char *name, FlagFloatOpt opt);
 
 // Struct used to specify the amount of flags a context should be able to store,
 // used for `flag_init_opt` and `flag_new_context_opt`, and as the named
@@ -307,17 +287,11 @@ typedef struct {
     i32 flag_capacity;
 } FlagCapacityOpt;
 
-// Initialize the global flags context, explicitly specifying the options for
-// initialization as a struct.
-//
-// You may be looking for `FLAG_INIT`, which allows you to specify only the
-// options you need as named optional arguments.
-void flag_init_opt(Arena *arena, FlagCapacityOpt opt);
 // Initialize the global flags context, allocating the necessary memory for it
 // using `arena`.
 //
-// You can specify an optional named argument, `flag_capacity`, that specifies
-// the amount of flags which the context's internal array can hold.
+// You can pass the `flag_capacity`option which customizes the amount of flags
+// which the context's internal array can hold.
 //
 // NOTE:
 // It is recommended that you leave `flag_capacity` untouched during development
@@ -326,18 +300,13 @@ void flag_init_opt(Arena *arena, FlagCapacityOpt opt);
 // can almost always know ahead of time how many flags you are going to create.
 #define FLAG_INIT(arena, ...)                                                  \
     flag_init_opt(arena, (WRAPPER(FlagCapacityOpt){__VA_ARGS__}).wrapper)
+void flag_init_opt(Arena *arena, FlagCapacityOpt opt);
 
-// Create a new flags context, explicitly specifying the options for
-// initialization as a struct.
-//
-// You may be looking for `FLAG_NEW_CONTEXT`, which allows you to specify only
-// the options you need as named optional arguments.
-FlagContext *flag_new_context_opt(Arena *arena, FlagCapacityOpt opt);
 // Create a new flags context, allocating the necessary memory for it
 // using `arena`.
 //
-// You can specify an optional named argument, `flag_capacity`, which customizes
-// the amount of flags which the context's internal array can hold.
+// You can pass the `flag_capacity`option which customizes the amount of flags
+// which the context's internal array can hold.
 //
 // NOTE:
 // It is recommended that you leave `flag_capacity` untouched during development
@@ -346,169 +315,130 @@ FlagContext *flag_new_context_opt(Arena *arena, FlagCapacityOpt opt);
 // can almost always know ahead of time how many flags you are going to create.
 #define FLAG_NEW_CONTEXT(arena, ...)                                           \
     flag_new_context_opt(arena, (WRAPPER(FlagCapacityOpt){__VA_ARGS__}).wrapper)
+FlagContext *flag_new_context_opt(Arena *arena, FlagCapacityOpt opt);
 
 typedef struct {
     FlagContext *ctx;
     bool parse_all;
 } FlagParseOpt;
 
-// Parse an `Args` struct, explicitly specifying which flags context to populate
-// as a struct. Returns a boolean specifying if an error was encountered while
-// parsing.
-//
-// You may be looking for `FLAG_PARSE`, which allows you to specify only the
-// options you need as named optional arguments, or even `FLAG_PARSE_MAIN`,
-// which allows you to pass the `argc` and `argv` parameters of `main` directly
-// into the parsing mechanism.
-bool flag_parse_opt(Arena *arena, Args args, FlagParseOpt opt);
 // Parse an `Args` struct, populating a given flags context. Uses `arena` to
 // allocate memory for the leftover arguments after parsing. Returns a boolean
 // specifying if an error was encountered while parsing.
 //
-// You can specify an optional named argument, `ctx`, that customizes which
-// flags context to use. Omitting this option or specifying `NULL` means using
-// the global flags context.
+// You can specify the `ctx` option to customize which flags context to use.
+// Omitting this option or specifying `NULL` means using the global flags
+// context.
 #define FLAG_PARSE(arena, args, ...)                                           \
     flag_parse_opt(arena, args, (WRAPPER(FlagParseOpt){__VA_ARGS__}).wrapper)
+bool flag_parse_opt(Arena *arena, Args args, FlagParseOpt opt);
 // Parse the `argc` and `argv` parameters of `main`, populating a given flags
 // context. Uses `arena` to allocate memory for the `Args` struct and the
 // leftover arguments after parsing. Returns a boolean specifying if an error
 // was encountered while parsing.
 //
-// You can specify an optional named argument, `ctx`, that customizes which
-// flags context to use. Omitting this option or specifying `NULL` means using
-// the global flags context.
+// You can specify the `ctx` option to customize which flags context to use.
+// Omitting this option or specifying `NULL` means using the global flags
+// context.
 #define FLAG_PARSE_MAIN(arena, argc, argv, ...)                                \
     flag_parse_opt(arena, args_from_main(arena, argc, argv),                   \
                    (WRAPPER(FlagParseOpt){__VA_ARGS__}).wrapper)
 
-// Struct used to specify which flags context to use for some `flag_*_opt`
-// function, and the named optional argument `ctx` for its macro equivalent.
+// Struct used to specify which flags context to use for:
+//
+// - FLAG_REST_ARGS
+// - FLAG_SET_PROGRAM_NAME
+// - FLAG_GET_PROGRAM_NAME
+// - FLAG_NAME
+// - FLAG_GET_ERROR
+// - FLAG_GET_ERROR_NAME
+// - FLAG_PRINT_ERROR
+// - FLAG_PRINT_OPTIONS
 typedef struct {
     FlagContext *ctx;
 } FlagContextOpt;
 
-// Get the leftover arguments after parsing, as an `Args` struct, explicitly
-// specifying which flags context to use as a struct.
-//
-// You may be looking for `FLAG_REST_ARGS`, which allows you to specify only the
-// options you need as named optional arguments.
-Args flag_rest_args_opt(FlagContextOpt opt);
 // Get the leftover arguments after parsing, as an `Args` struct.
 //
-// You can specify an optional named argument, `ctx`, that customizes which
-// flags context to use. Omitting this option or specifying `NULL` means using
-// the global flags context.
+// You can specify the `ctx` option to customize which flags context to use.
+// Omitting this option or specifying `NULL` means using the global flags
+// context.
 #define FLAG_REST_ARGS(...)                                                    \
     flag_rest_args_opt((WRAPPER(FlagContextOpt){__VA_ARGS__}).wrapper)
+Args flag_rest_args_opt(FlagContextOpt opt);
 
-// Set the program name of a flags context, so it doesn't get parsed out of the
-// CLI arguments, explicitly specifying which flags context to use as a struct.
-//
-// You may be looking for `FLAG_SET_PROGRAM_NAME`, which allows you to specify
-// only the options you need as named optional arguments.
-void flag_set_program_name_opt(StringView name, FlagContextOpt opt);
 // Set the program name of a flags context, so it doesn't get parsed out of the
 // CLI arguments.
 //
-// You can specify an optional named argument, `ctx`, that customizes which
-// flags context to use. Omitting this option or specifying `NULL` means using
-// the global flags context.
+// You can specify the `ctx` option to customize which flags context to use.
+// Omitting this option or specifying `NULL` means using the global flags
+// context.
 #define FLAG_SET_PROGRAM_NAME(name, ...)                                       \
     flag_set_program_name_opt(name,                                            \
                               (WRAPPER(FlagContextOpt){__VA_ARGS__}).wrapper)
+void flag_set_program_name_opt(StringView name, FlagContextOpt opt);
 
-// Get the program name of a flags context, explicitly specifying which flags
-// context to use as a struct.
-//
-// You may be looking for `FLAG_SET_PROGRAM_NAME`, which allows you to specify
-// only the options you need as named optional arguments.
-StringView flag_get_program_name_opt(FlagContextOpt opt);
 // Get the program name of a flags context, as parsed from the CLI or set by
 // `FLAG_SET_PROGRAM_NAME`.
 //
-// You can specify an optional named argument, `ctx`, that customizes which
-// flags context to use. Omitting this option or specifying `NULL` means using
-// the global flags context.
+// You can specify the `ctx` option to customize which flags context to use.
+// Omitting this option or specifying `NULL` means using the global flags
+// context.
 #define FLAG_GET_PROGRAM_NAME(...)                                             \
     flag_get_program_name_opt((WRAPPER(FlagContextOpt){__VA_ARGS__}).wrapper)
+StringView flag_get_program_name_opt(FlagContextOpt opt);
 
-// Get the name of a flag by its value within a certain context,
-// explicitly specifying which flags context to use as a struct.
-//
-// You may be looking for `FLAG_NAME`, which allows you to specify
-// only the options you need as named optional arguments.
-StringView flag_name_opt(void *value, FlagContextOpt opt);
 // Get the name of a flag by its value within a certain flags context.
 //
-// You can specify an optional named argument, `ctx`, that customizes which
-// flags context to use. Omitting this option or specifying `NULL` means using
-// the global flags context.
+// You can specify the `ctx` option to customize which flags context to use.
+// Omitting this option or specifying `NULL` means using the global flags
+// context.
 #define FLAG_NAME(value, ...)                                                  \
     flag_name_opt(value, (WRAPPER(FlagContextOpt){__VA_ARGS__}).wrapper)
+StringView flag_name_opt(void *value, FlagContextOpt opt);
 
-// Get the current error in a context, explicitly specifying which flags context
-// to use as a struct.
-//
-// You may be looking for `FLAG_GET_ERROR`, which allows you to specify
-// only the options you need as named optional arguments.
-FlagError flag_get_error_opt(FlagContextOpt opt);
 // Get the current error in a context, for custom error handling. Note that if
 // you just want to print some information about the current error, you can use
 // `FLAG_PRINT_ERROR`.
 //
-// You can specify an optional named argument, `ctx`, that customizes which
-// flags context to use. Omitting this option or specifying `NULL` means using
-// the global flags context.
+// You can specify the `ctx` option to customize which flags context to use.
+// Omitting this option or specifying `NULL` means using the global flags
+// context.
 #define FLAG_GET_ERROR(...)                                                    \
     flag_get_error_opt((WRAPPER(FlagContextOpt){__VA_ARGS__}).wrapper)
+FlagError flag_get_error_opt(FlagContextOpt opt);
 
-// Get the name of the flag that caused the current error in a context,
-// explicitly specifying which flags context to use as a struct.
-//
-// You may be looking for `FLAG_GET_ERROR_NAME`, which allows you to specify
-// only the options you need as named optional arguments.
-StringView flag_get_error_name_opt(FlagContextOpt opt);
 // Get the name of the flag (possibly an unknown "flag" specified by the CLI
 // arguments) that caused the current error in a context, for custom error
 // handling. Note that if you just want to print some information about the
 // current error, you can use `FLAG_PRINT_ERROR`.
 //
-// You can specify an optional named argument, `ctx`, that customizes which
-// flags context to use. Omitting this option or specifying `NULL` means using
-// the global flags context.
+// You can specify the `ctx` option to customize which flags context to use.
+// Omitting this option or specifying `NULL` means using the global flags
+// context.
 #define FLAG_GET_ERROR_NAME(...)                                               \
     flag_get_error_name_opt((WRAPPER(FlagContextOpt){__VA_ARGS__}).wrapper)
+StringView flag_get_error_name_opt(FlagContextOpt opt);
 
-// Print information about the current error to `stream`, explicitly specifying
-// which flags context to use as a struct.
-//
-// You may be looking for `FLAG_PRINT_ERROR`, which allows you to specify only
-// the only the options you need as named optional arguments.
-void flag_print_error_opt(FILE *stream, FlagContextOpt opt);
 // Print information about the current error to `stream`. You should only call
 // this if `FLAG_PARSE` or `FLAG_PARSE_MAIN` returned `false`.
 //
-// You can specify an optional named argument, `ctx`, that customizes which
-// flags context to use. Omitting this option or specifying `NULL` means using
-// the global flags context.
+// You can specify the `ctx` option to customize which flags context to use.
+// Omitting this option or specifying `NULL` means using the global flags
+// context.
 #define FLAG_PRINT_ERROR(stream, ...)                                          \
     flag_print_error_opt(stream, (WRAPPER(FlagContextOpt){__VA_ARGS__}).wrapper)
+void flag_print_error_opt(FILE *stream, FlagContextOpt opt);
 
-// Print information about all the different flags within a context, explicitly
-// specifying which flags context to use as a struct.
-//
-// You may be looking for `FLAG_PRINT_OPTIONS`, which allows you to specify
-// only the options you need as named optional arguments.
-void flag_print_options_opt(FILE *stream, FlagContextOpt opt);
 // Print information about all the different flags within a context.
 //
-// You can specify an optional named argument, `ctx`, that customizes which
-// flags context to use. Omitting this option or specifying `NULL` means using
-// the global flags context.
+// You can specify the `ctx` option to customize which flags context to use.
+// Omitting this option or specifying `NULL` means using the global flags
+// context.
 #define FLAG_PRINT_OPTIONS(stream, ...)                                        \
     flag_print_options_opt(stream,                                             \
                            (WRAPPER(FlagContextOpt){__VA_ARGS__}).wrapper)
+void flag_print_options_opt(FILE *stream, FlagContextOpt opt);
 
 #ifdef BOOKSTORE_IMPLEMENTATION
 

@@ -93,8 +93,7 @@ typedef struct {
     bool first;
 } DirectoryWalkEntry;
 
-// The struct of possible options to pass to `directory_walk_opt`, which also
-// act as the named optional arguments to the `DIRECTORY_WALK` macro.
+// The struct of possible options to pass to `DIRECTORY_WALK`.
 typedef struct {
     // Pointer to data which will be passed along to the `visit` callback.
     void *user_data;
@@ -181,36 +180,24 @@ bool make_directory(const char *path, bool fail_if_exists);
 //
 // Logs an error and returns `false` if some error occurs.
 bool make_directory_recursively(Arena *arena, const char *path);
-// Walk the directory `root` and its children, calling `visit` on each one,
-// explicitly specifying the options for initialization as a struct. Uses
-// `arena` to allocate the memory to render the path strings onto, and passes it
-// along to `visit` within each entry so it can make its own allocations easily.
-// If `visit` doesn't do any allocations, consider using a `Lifetime` so the
-// memory is deallocated after walking is finished.
-//
-// Logs an error and returns `false` if some error occurs, or if `visit` returns
-// `false` for any of the entries.
-//
-// You may be looking for `DIRECTORY_WALK`, which allows you to specify only the
-// options you need as named optional arguments.
-bool directory_walk_opt(Arena *arena, const char *root,
-                        DirectoryWalkVisitCallback visit, DirectoryWalkOpt opt);
 // Walk the directory `root` and its children, calling `visit` on each one. Uses
 // `arena` to allocate the memory to render the path strings onto, and passes it
 // along to `visit` within each entry so it can make its own allocations easily.
 // If `visit` doesn't do any allocations, consider using a `Lifetime` so the
 // memory is deallocated after walking is finished.
 //
-// You can pass a named optional argument `user_data` to specify the data passed
-// to the `visit` callback. You can also pass the `post_order` named optional
-// argument to traverse the entries in post-order instead of depth-first, going
-// to the deepest entries first and then back up the tree.
+// You can pass the `user_data` option to specify the data passed to the `visit`
+// callback. You can also pass the `post_order` option to traverse the entries
+// in post-order instead of depth-first, going to the deepest entries first and
+// then back up the tree.
 //
 // Logs an error and returns `false` if some error occurs, or if `visit` returns
 // `false` for any of the entries.
 #define DIRECTORY_WALK(arena, root, cb, ...)                                   \
     directory_walk_opt(arena, root, cb,                                        \
                        (WRAPPER(DirectoryWalkOpt){__VA_ARGS__}).wrapper)
+bool directory_walk_opt(Arena *arena, const char *root,
+                        DirectoryWalkVisitCallback visit, DirectoryWalkOpt opt);
 // List the files in the directory `path` into `out`. Uses `arena` to allocate
 // the memory for the file paths.
 //

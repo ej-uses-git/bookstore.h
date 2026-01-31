@@ -102,8 +102,7 @@ ARRAY_DECLARE_PREFIX(CommandArgument, Command, command);
                    sizeof((CommandArgument[]){__VA_ARGS__}) /                  \
                        sizeof(CommandArgument))
 
-// The struct of possible options to pass to `command_run_opt`, which also act
-// as the named optional arguments to the `COMMAND_RUN` macro.
+// The struct of possible options to pass `COMMAND_RUN`.
 typedef struct {
     // A process list to append the command's process to. If `NULL`, the command
     // runs synchronously and `COMMAND_RUN` will only return once it is
@@ -133,20 +132,12 @@ typedef struct {
 // Render the command into a `StringView`, properly quoting arguments that need
 // it. Used to log debug information before running a command.
 StringView command_render(Arena *arena, Command command);
-// Run the command `command`, explicitly specifying the options for running as a
-// struct. Uses `arena` to allocate memory for quoting on Windows, or for
-// creating a NULL-terminated list of arguments on POSIX, and for rendering the
-// command for debug logs.
-//
-// You may be looking for `COMMAND_RUN`, which allows you to specify only the
-// options you need as named optional arguments.
-bool command_run_opt(Arena *arena, Command *command, CommandRunOpt opt);
 // Run the command `command`. Uses `arena` to allocate memory for quoting on
 // Windows, or for creating a NULL-terminated list of arguments on POSIX, and
 // for rendering the command for debug logs.
 //
-// You can pass the following named optional arguments to specify additional
-// configuration for running the command:
+// You can pass the following options to specify additional configuration for
+// running the command:
 //
 // - `async` - specify a list of processes to append the process to, instead of
 // running synchronously
@@ -188,6 +179,7 @@ bool command_run_opt(Arena *arena, Command *command, CommandRunOpt opt);
 #define COMMAND_RUN(arena, command, ...)                                       \
     command_run_opt(arena, command,                                            \
                     (WRAPPER(CommandRunOpt){__VA_ARGS__}).wrapper)
+bool command_run_opt(Arena *arena, Command *command, CommandRunOpt opt);
 
 #ifdef BOOKSTORE_IMPLEMENTATION
 
