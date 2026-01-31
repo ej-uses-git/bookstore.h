@@ -137,8 +137,8 @@ bool build_test(Arena *arena, const char *path, FilePaths dependencies,
     COMMAND_CC_OUTPUT(lt.arena, &command, output.items);
     COMMAND_CC_INPUTS(&command, path);
 
-    if (!COMMAND_RUN(lt.arena, &command, .async = procs,
-                     .concurrency = concurrency))
+    if (!COMMAND_RUN(lt.arena, &command,
+                     {.async = procs, .concurrency = concurrency}))
         DEFER_RETURN(false);
 
     DEFER_LABEL({ lifetime_end(lt); });

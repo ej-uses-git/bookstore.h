@@ -153,7 +153,7 @@ bool command_run_opt(Arena *arena, Command *command, CommandRunOpt opt);
 //
 // ```
 // ProcessList procs = process_list_new(arena, capacity);
-// if (!COMMAND_RUN(arena, command, .async = &procs)) fail();
+// if (!COMMAND_RUN(arena, command, {.async = &procs})) fail();
 // if (!process_list_wait(procs)) fail();
 // ```
 //
@@ -162,7 +162,9 @@ bool command_run_opt(Arena *arena, Command *command, CommandRunOpt opt);
 //
 // ```
 // ProcessList procs = process_list_new(arena, capacity);
-// if (!COMMAND_RUN(arena, command, .async = &procs, .concurrency = 10)) fail();
+// if (!COMMAND_RUN(arena, command,
+//                 {.async = &procs, .concurrency = 10}))
+//     fail();
 // if (!process_list_wait(procs)) fail();
 // ```
 //
@@ -171,20 +173,21 @@ bool command_run_opt(Arena *arena, Command *command, CommandRunOpt opt);
 //
 // ```
 // if (!COMMAND_RUN(arena, command,
-//                  .stdin_path = "input.txt",
+//                  {.stdin_path = "input.txt",
 //                  .stdout_path = "output.txt",
-//                  .stderr_path = "error.txt")) fail();
+//                  .stderr_path = "error.txt"})) fail();
 // ```
 //
 // - `keep_arguments` - keep the arguments in `command` instead of clearing it
 //
 // ```
-// if (!COMMAND_RUN(arena, command, .keep_arguments = true)) fail();
+// if (!COMMAND_RUN(arena, command, {.keep_arguments = true})) fail();
 // // Rerun the same command as above
 // if (!COMMAND_RUN(arena, command)) fail();
 // ```
 #define COMMAND_RUN(arena, command, ...)                                       \
-    command_run_opt(arena, command, (CommandRunOpt){__VA_ARGS__})
+    command_run_opt(arena, command,                                            \
+                    (WRAPPER(CommandRunOpt){__VA_ARGS__}).wrapper)
 
 #ifdef BOOKSTORE_IMPLEMENTATION
 
