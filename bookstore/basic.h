@@ -21,6 +21,27 @@
 // MAC(hello); // "hello!"
 #define MACRO_STRING(x) #x
 
+// @macro_function WRAPPER
+//
+// @argument T
+//
+// @description
+// A wrapper around a type, allowing you to pass it as a struct or directly as \
+// a struct initializer list.
+//
+// @example
+// typedef struct {
+//   i32 a;
+//   StringView b;
+// } FOpt;;
+// void f_opt(FOpt opt);
+// #define F(...) f_opt((WRAPPER(FOpt){__VA_ARGS__}).wrapper)
+//
+// F({ .a = 10 });
+// FOpt opt = {.b = SV_EMPTY};
+// F(opt);
+#define WRAPPER(T) (struct { T wrapper; })
+
 // @macro global
 //
 // @description
