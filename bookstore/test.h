@@ -205,8 +205,8 @@ typedef struct {
                              SB_ARG(test__sb));                                \
                 log_error("To reproduce this issue, add the following to "     \
                           "your PROP block:");                                 \
-                log_error("  .seed = {" U64_FMT "ULL," U64_FMT                 \
-                          "ULL}, .runs = 1",                                   \
+                log_error("  {.seed = {" U64_FMT "ULL," U64_FMT                \
+                          "ULL}, .runs = 1}",                                  \
                           test__initstate, test__initseq);                     \
                 break;                                                         \
             }                                                                  \
@@ -290,8 +290,8 @@ typedef struct {
                              __FILE__, __LINE__, SB_ARG(test__sb));            \
                 log_error("To reproduce this issue, add the following to "     \
                           "your PROP_FAIL block:");                            \
-                log_error("  .seed = {" U64_FMT "ULL," U64_FMT                 \
-                          "ULL}, .runs = 1",                                   \
+                log_error("  {.seed = {" U64_FMT "ULL," U64_FMT                \
+                          "ULL}, .runs = 1}",                                  \
                           test__initstate, test__initseq);                     \
                 break;                                                         \
             }                                                                  \
