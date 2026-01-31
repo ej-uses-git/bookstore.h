@@ -44,7 +44,7 @@ TEST_MAIN({
 
     DESCRIBE("lifetime_begin/lifetime_end", {
         PROP("should create/end a temporary allocation lifetime", rng, {
-            i32 size = random_next_i32_ranged(&rng, 0, KiB(2)) + 1;
+            i32 size = random_next_i32_ranged(&rng, 1, KiB(2));
             arena = arena_new(size * sizeof(i32));
 
             arena_alloc(arena, 1);
