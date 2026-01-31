@@ -209,7 +209,8 @@ bool walk_directory_opt(Arena *arena, const char *root, WalkVisitCallback visit,
 // Logs an error and returns `false` if some error occurs, or if `visit` returns
 // `false` for any of the entries.
 #define WALK_DIRECTORY(arena, root, cb, ...)                                   \
-    walk_directory_opt(arena, root, cb, (WalkDirectoryOpt){__VA_ARGS__})
+    walk_directory_opt(arena, root, cb,                                        \
+                       (WRAPPER(WalkDirectoryOpt){__VA_ARGS__}).wrapper)
 // List the files in the directory `path` into `out`. Uses `arena` to allocate
 // the memory for the file paths.
 //
@@ -727,7 +728,7 @@ bool system__list_directory_visit(WalkEntry entry) {
 
 bool list_directory(Arena *arena, const char *path, FilePaths *out) {
     return WALK_DIRECTORY(arena, path, system__list_directory_visit,
-                          .user_data = out);
+                          {.user_data = out});
 }
 
 typedef struct {
@@ -777,7 +778,7 @@ bool copy_directory_recursively(Arena *arena, const char *src,
     System__CopyDirectoryRecursivelyData user_data = {.dest = dest, .src = src};
     bool result =
         WALK_DIRECTORY(lt.arena, src, system__copy_directory_recursively_visit,
-                       .user_data = &user_data);
+                       {.user_data = &user_data});
     lifetime_end(lt);
     return result;
 }
@@ -790,7 +791,7 @@ bool delete_directory_recursively(Arena *arena, const char *path) {
     Lifetime lt = lifetime_begin(arena);
     bool result =
         WALK_DIRECTORY(arena, path, system__delete_directory_recursively_visit,
-                       .post_order = true);
+                       {.post_order = true});
     lifetime_end(lt);
     return result;
 }
