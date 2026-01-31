@@ -9,8 +9,6 @@
 #include "./basic.h"
 #include <stdbool.h>
 
-#define TEMP__REPLACE_ME 64
-
 // A `typedef` for a struct of a node in an AA tree with values of type `T`.
 #define AANODE_TYPEDEF(T, name)                                                \
     typedef struct name {                                                      \
@@ -196,7 +194,8 @@
     }                                                                          \
     bool prefix##_insert(Arena *arena, name *self, TValue value) {             \
         Lifetime lt = lifetime_begin(arena);                                   \
-        AATree__Stack stack = aatree__stack_new(lt.arena, TEMP__REPLACE_ME);   \
+        AATree__Stack stack = aatree__stack_new(                               \
+            lt.arena, aatree__stack_capacity(self->count + 1));                \
         AATree__StackFrame init = {.index = &self->root_index,                 \
                                    .visited = false};                          \
         aatree__stack_push(&stack, init);                                      \
@@ -244,7 +243,8 @@
     }                                                                          \
     bool prefix##_delete(Arena *arena, name *self, TValue value) {             \
         Lifetime lt = lifetime_begin(arena);                                   \
-        AATree__Stack stack = aatree__stack_new(lt.arena, TEMP__REPLACE_ME);   \
+        AATree__Stack stack =                                                  \
+            aatree__stack_new(lt.arena, aatree__stack_capacity(self->count));  \
         AATree__StackFrame init = {.index = &self->root_index,                 \
                                    .visited = false};                          \
         aatree__stack_push(&stack, init);                                      \
@@ -313,8 +313,8 @@
     }                                                                          \
     const TValue *prefix##_find(Arena *arena, name self, TValue value) {       \
         Lifetime lt = lifetime_begin(arena);                                   \
-        AATree__WalkStack stack =                                              \
-            aatree__walk_stack_new(lt.arena, TEMP__REPLACE_ME);                \
+        AATree__WalkStack stack = aatree__walk_stack_new(                      \
+            lt.arena, aatree__stack_capacity(self.count));                     \
         aatree__walk_stack_push(&stack, self.root_index);                      \
         const TValue *found = NULL;                                            \
         while (stack.count) {                                                  \
@@ -337,7 +337,7 @@
     bool prefix##_walk(Arena *arena, name self, name##WalkVisitCallback visit, \
                        void *user_data) {                                      \
         AATree__WalkStack stack =                                              \
-            aatree__walk_stack_new(arena, TEMP__REPLACE_ME);                   \
+            aatree__walk_stack_new(arena, aatree__stack_capacity(self.count)); \
         aatree__walk_stack_push(&stack, self.root_index);                      \
         while (stack.count) {                                                  \
             i32 index = aatree__walk_stack_pop(&stack);                        \
@@ -368,6 +368,10 @@ ARRAY_DEFINE_PREFIX(AATree__StackFrame, AATree__Stack, aatree__stack)
 
 ARRAY_TYPEDEF(i32, AATree__WalkStack);
 ARRAY_DEFINE_PREFIX(i32, AATree__WalkStack, aatree__walk_stack)
+
+i32 aatree__stack_capacity(u32 node_capacity) {
+    return (node_capacity / 2) + 2;
+}
 
 #endif // BOOKSTORE_IMPLEMENTATION
 
