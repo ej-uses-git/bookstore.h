@@ -171,7 +171,7 @@ typedef struct {
 } PropOpt;
 #define PROP(message, rng_name, block, ...)                                    \
     do {                                                                       \
-        PropOpt test__opt = {__VA_ARGS__};                                     \
+        PropOpt test__opt = (WRAPPER(PropOpt){__VA_ARGS__}).wrapper;           \
         Random test__setup_rng;                                                \
         random_seed(&test__setup_rng, time(NULL) ^ (intptr_t)&printf,          \
                     (intptr_t)&test__opt);                                     \
@@ -257,7 +257,7 @@ typedef struct {
 #define PROP_FAIL(message, rng_name, block, ...)                               \
     do {                                                                       \
         test__context.failure_log_level = LOG_DEBUG;                           \
-        PropOpt test__opt = {__VA_ARGS__};                                     \
+        PropOpt test__opt = (WRAPPER(PropOpt){__VA_ARGS__}).wrapper;           \
         Random test__setup_rng;                                                \
         random_seed(&test__setup_rng, time(NULL) ^ (intptr_t)&printf,          \
                     (intptr_t)&test__opt);                                     \
