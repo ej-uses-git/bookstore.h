@@ -49,7 +49,7 @@ TEST_MAIN({
         DESCRIBE("boolean flags", {
             bool flag;
 
-            BEFORE_EACH({ FLAG_BOOL(FLAG, .var = &flag); });
+            BEFORE_EACH({ FLAG_BOOL(FLAG, {.var = &flag}); });
 
             IT("should parse true when exists", {
                 args = ARGS_FROM_CSTR_LIST(arena, "-" FLAG);
@@ -110,7 +110,7 @@ TEST_MAIN({
             StringView flag;
             char *value = "value";
 
-            BEFORE_EACH({ FLAG_STRING(FLAG, .var = &flag); });
+            BEFORE_EACH({ FLAG_STRING(FLAG, {.var = &flag}); });
 
             IT("should fail if there's no value", {
                 args = ARGS_FROM_CSTR_LIST(arena, "-" FLAG);
@@ -136,7 +136,7 @@ TEST_MAIN({
             u64 flag;
             u64 value = 1234;
 
-            BEFORE_EACH({ FLAG_U64(FLAG, .var = &flag); });
+            BEFORE_EACH({ FLAG_U64(FLAG, {.var = &flag}); });
 
             IT("should fail if there's no value", {
                 args = ARGS_FROM_CSTR_LIST(arena, "-" FLAG);
@@ -185,7 +185,7 @@ TEST_MAIN({
             float flag;
             float value = 123.123;
 
-            BEFORE_EACH({ FLAG_FLOAT(FLAG, .var = &flag); });
+            BEFORE_EACH({ FLAG_FLOAT(FLAG, {.var = &flag}); });
 
             IT("should fail if there's no value", {
                 args = ARGS_FROM_CSTR_LIST(arena, "-" FLAG);

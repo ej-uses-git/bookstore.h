@@ -8,11 +8,16 @@ global bool help;
 global bool debug;
 
 void set_help_and_debug(FlagContext *ctx) {
-    FLAG_BOOL("-help", .alias = "h",
-              .description = "Print this help information and exit.",
-              .ctx = ctx, .var = &help);
-    FLAG_BOOL("-debug", .alias = "d", .description = "Print debug information.",
-              .ctx = ctx, .var = &debug);
+    FLAG_BOOL("-help",
+              {.alias = "h",
+               .description = "Print this help information and exit.",
+               .ctx = ctx,
+               .var = &help});
+    FLAG_BOOL("-debug",
+              {.alias = "d",
+               .description = "Print debug information.",
+               .ctx = ctx,
+               .var = &debug});
 }
 
 bool help_and_debug(void (*usage_cb)(FILE *stream)) {
@@ -29,8 +34,9 @@ bool help_and_debug(void (*usage_cb)(FILE *stream)) {
 }
 
 void copy_file_usage(FILE *stream) {
-    // clang-format off
+    FlagContextOpt command_ctx_opt = {.ctx = command_ctx};
     fprintf(stream,
+            // clang-format off
             "Usage: " SV_FMT " " SV_FMT " <options>\n"
             "\n"
             "Copy a file.\n"
@@ -39,26 +45,28 @@ void copy_file_usage(FILE *stream) {
             // clang-format on
             "Options:\n",
             SV_ARG(FLAG_GET_PROGRAM_NAME()),
-            SV_ARG(FLAG_GET_PROGRAM_NAME(.ctx = command_ctx)));
-    FLAG_PRINT_OPTIONS(stream, .ctx = command_ctx);
+            SV_ARG(FLAG_GET_PROGRAM_NAME(command_ctx_opt)));
+    FLAG_PRINT_OPTIONS(stream, command_ctx_opt);
 }
 
 bool copy_file_command(Arena *arena, Args args) {
-    command_ctx = FLAG_NEW_CONTEXT(arena, .flag_capacity = 4);
+    command_ctx = FLAG_NEW_CONTEXT(arena, {.flag_capacity = 4});
 
     StringView *src = FLAG_STRING(
-        "-source", .alias = "i",
-        .description = "The source file.\n" PAD_DESCRIPTION "Required.",
-        .ctx = command_ctx);
+        "-source",
+        {.alias = "i",
+         .description = "The source file.\n" PAD_DESCRIPTION "Required.",
+         .ctx = command_ctx});
     StringView *dest = FLAG_STRING(
-        "-destination", .alias = "o",
-        .description = "The destination file.\n" PAD_DESCRIPTION "Required.",
-        .ctx = command_ctx);
+        "-destination",
+        {.alias = "o",
+         .description = "The destination file.\n" PAD_DESCRIPTION "Required.",
+         .ctx = command_ctx});
     set_help_and_debug(command_ctx);
 
-    if (!FLAG_PARSE(arena, args, .ctx = command_ctx)) {
+    if (!FLAG_PARSE(arena, args, {.ctx = command_ctx})) {
         copy_file_usage(stderr);
-        FLAG_PRINT_ERROR(stderr, .ctx = command_ctx);
+        FLAG_PRINT_ERROR(stderr, {.ctx = command_ctx});
         return false;
     }
 
@@ -69,14 +77,14 @@ bool copy_file_command(Arena *arena, Args args) {
     if (!src->count) {
         copy_file_usage(stderr);
         fprintf(stderr, "ERROR: Missing required option '-" SV_FMT "'\n",
-                SV_ARG(FLAG_NAME(src, .ctx = command_ctx)));
+                SV_ARG(FLAG_NAME(src, {.ctx = command_ctx})));
         return false;
     }
 
     if (!dest->count) {
         copy_file_usage(stderr);
         fprintf(stderr, "ERROR: Missing required option '-" SV_FMT "'\n",
-                SV_ARG(FLAG_NAME(dest, .ctx = command_ctx)));
+                SV_ARG(FLAG_NAME(dest, {.ctx = command_ctx})));
         return false;
     }
 
@@ -99,18 +107,18 @@ void delete_file_usage(FILE *stream) {
             // clang-format on
             "Options:\n",
             SV_ARG(FLAG_GET_PROGRAM_NAME()),
-            SV_ARG(FLAG_GET_PROGRAM_NAME(.ctx = command_ctx)));
-    FLAG_PRINT_OPTIONS(stream, .ctx = command_ctx);
+            SV_ARG(FLAG_GET_PROGRAM_NAME({.ctx = command_ctx})));
+    FLAG_PRINT_OPTIONS(stream, {.ctx = command_ctx});
 }
 
 bool delete_file_command(Arena *arena, Args args) {
-    command_ctx = FLAG_NEW_CONTEXT(arena, .flag_capacity = 2);
+    command_ctx = FLAG_NEW_CONTEXT(arena, {.flag_capacity = 2});
 
     set_help_and_debug(command_ctx);
 
-    if (!FLAG_PARSE(arena, args, .ctx = command_ctx)) {
+    if (!FLAG_PARSE(arena, args, {.ctx = command_ctx})) {
         delete_file_usage(stderr);
-        FLAG_PRINT_ERROR(stderr, .ctx = command_ctx);
+        FLAG_PRINT_ERROR(stderr, {.ctx = command_ctx});
         return false;
     }
 
@@ -118,7 +126,7 @@ bool delete_file_command(Arena *arena, Args args) {
         return true;
     }
 
-    args = FLAG_REST_ARGS(.ctx = command_ctx);
+    args = FLAG_REST_ARGS({.ctx = command_ctx});
     if (!args.count) {
         delete_file_usage(stderr);
         fprintf(stderr, "ERROR: Missing required argument <file>\n");
@@ -139,8 +147,8 @@ void list_directory_usage(FILE *stream) {
             // clang-format on
             "Options:\n",
             SV_ARG(FLAG_GET_PROGRAM_NAME()),
-            SV_ARG(FLAG_GET_PROGRAM_NAME(.ctx = command_ctx)));
-    FLAG_PRINT_OPTIONS(stream, .ctx = command_ctx);
+            SV_ARG(FLAG_GET_PROGRAM_NAME({.ctx = command_ctx})));
+    FLAG_PRINT_OPTIONS(stream, {.ctx = command_ctx});
 }
 
 bool list_directory_visit(WalkEntry entry) {
@@ -156,14 +164,16 @@ bool list_directory_visit(WalkEntry entry) {
 bool list_directory_command(Arena *arena, Args args) {
     command_ctx = FLAG_NEW_CONTEXT(arena);
 
-    StringView *directory = FLAG_STRING(
-        "-directory", ._default = sv_from_cstr("."), .ctx = command_ctx,
-        .description = "The directory to list the contents of.");
+    StringView *directory =
+        FLAG_STRING("-directory",
+                    {._default = sv_from_cstr("."),
+                     .ctx = command_ctx,
+                     .description = "The directory to list the contents of."});
     set_help_and_debug(command_ctx);
 
-    if (!FLAG_PARSE(arena, args, .ctx = command_ctx)) {
+    if (!FLAG_PARSE(arena, args, {.ctx = command_ctx})) {
         list_directory_usage(stderr);
-        FLAG_PRINT_ERROR(stderr, .ctx = command_ctx);
+        FLAG_PRINT_ERROR(stderr, {.ctx = command_ctx});
         return false;
     }
 
@@ -190,27 +200,29 @@ void copy_directory_recursively_usage(FILE *stream) {
             // clang-format on
             "Options:\n",
             SV_ARG(FLAG_GET_PROGRAM_NAME()),
-            SV_ARG(FLAG_GET_PROGRAM_NAME(.ctx = command_ctx)));
-    FLAG_PRINT_OPTIONS(stream, .ctx = command_ctx);
+            SV_ARG(FLAG_GET_PROGRAM_NAME({.ctx = command_ctx})));
+    FLAG_PRINT_OPTIONS(stream, {.ctx = command_ctx});
 }
 
 bool copy_directory_recursively_command(Arena *arena, Args args) {
-    command_ctx = FLAG_NEW_CONTEXT(arena, .flag_capacity = 4);
+    command_ctx = FLAG_NEW_CONTEXT(arena, {.flag_capacity = 4});
 
     StringView *src = FLAG_STRING(
-        "-source", .alias = "i",
-        .description = "The source directory.\n" PAD_DESCRIPTION "Required.",
-        .ctx = command_ctx);
+        "-source",
+        {.alias = "i",
+         .description = "The source directory.\n" PAD_DESCRIPTION "Required.",
+         .ctx = command_ctx});
     StringView *dest = FLAG_STRING(
-        "-destination", .alias = "o",
-        .description =
-            "The destination directory.\n" PAD_DESCRIPTION "Required.",
-        .ctx = command_ctx);
+        "-destination",
+        {.alias = "o",
+         .description =
+             "The destination directory.\n" PAD_DESCRIPTION "Required.",
+         .ctx = command_ctx});
     set_help_and_debug(command_ctx);
 
-    if (!FLAG_PARSE(arena, args, .ctx = command_ctx)) {
+    if (!FLAG_PARSE(arena, args, {.ctx = command_ctx})) {
         copy_directory_recursively_usage(stderr);
-        FLAG_PRINT_ERROR(stderr, .ctx = command_ctx);
+        FLAG_PRINT_ERROR(stderr, {.ctx = command_ctx});
         return false;
     }
 
@@ -221,14 +233,14 @@ bool copy_directory_recursively_command(Arena *arena, Args args) {
     if (!src->count) {
         copy_directory_recursively_usage(stderr);
         fprintf(stderr, "ERROR: Missing required option '-" SV_FMT "'\n",
-                SV_ARG(FLAG_NAME(src, .ctx = command_ctx)));
+                SV_ARG(FLAG_NAME(src, {.ctx = command_ctx})));
         return false;
     }
 
     if (!dest->count) {
         copy_directory_recursively_usage(stderr);
         fprintf(stderr, "ERROR: Missing required option '-" SV_FMT "'\n",
-                SV_ARG(FLAG_NAME(dest, .ctx = command_ctx)));
+                SV_ARG(FLAG_NAME(dest, {.ctx = command_ctx})));
         return false;
     }
 
@@ -252,18 +264,18 @@ void delete_directory_recursively_usage(FILE *stream) {
             // clang-format on
             "Options:\n",
             SV_ARG(FLAG_GET_PROGRAM_NAME()),
-            SV_ARG(FLAG_GET_PROGRAM_NAME(.ctx = command_ctx)));
-    FLAG_PRINT_OPTIONS(stream, .ctx = command_ctx);
+            SV_ARG(FLAG_GET_PROGRAM_NAME({.ctx = command_ctx})));
+    FLAG_PRINT_OPTIONS(stream, {.ctx = command_ctx});
 }
 
 bool delete_directory_recursively_command(Arena *arena, Args args) {
-    command_ctx = FLAG_NEW_CONTEXT(arena, .flag_capacity = 2);
+    command_ctx = FLAG_NEW_CONTEXT(arena, {.flag_capacity = 2});
 
     set_help_and_debug(command_ctx);
 
-    if (!FLAG_PARSE(arena, args, .ctx = command_ctx)) {
+    if (!FLAG_PARSE(arena, args, {.ctx = command_ctx})) {
         delete_directory_recursively_usage(stderr);
-        FLAG_PRINT_ERROR(stderr, .ctx = command_ctx);
+        FLAG_PRINT_ERROR(stderr, {.ctx = command_ctx});
         return false;
     }
 
@@ -271,7 +283,7 @@ bool delete_directory_recursively_command(Arena *arena, Args args) {
         return true;
     }
 
-    args = FLAG_REST_ARGS(.ctx = command_ctx);
+    args = FLAG_REST_ARGS({.ctx = command_ctx});
     if (!args.count) {
         delete_directory_recursively_usage(stderr);
         fprintf(stderr, "ERROR: Missing required argument <directory>\n");
@@ -310,7 +322,7 @@ void usage(FILE *stream) {
 
 int main(int argc, const char **argv) {
     Arena *arena = arena_new(MiB(1));
-    FLAG_INIT(arena, .flag_capacity = 2);
+    FLAG_INIT(arena, {.flag_capacity = 2});
 
     set_help_and_debug(NULL);
 

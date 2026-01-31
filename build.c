@@ -41,13 +41,13 @@ int main(int argc, const char **argv) {
 
     FLAG_INIT(arena);
 
-    bool *help =
-        FLAG_BOOL("-help", .alias = "h",
-                  .description = "Print this help information and exit.");
-    bool *debug = FLAG_BOOL("-debug", .alias = "d",
-                            .description = "Print debug information.");
+    bool *help = FLAG_BOOL(
+        "-help",
+        {.alias = "h", .description = "Print this help information and exit."});
+    bool *debug = FLAG_BOOL(
+        "-debug", {.alias = "d", .description = "Print debug information."});
 
-    if (!FLAG_PARSE_MAIN(arena, argc, argv, .parse_all = true)) {
+    if (!FLAG_PARSE_MAIN(arena, argc, argv, {.parse_all = true})) {
         usage(stderr);
         FLAG_PRINT_ERROR(stderr);
         return 1;
