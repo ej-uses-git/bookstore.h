@@ -34,9 +34,8 @@ TEST_MAIN({
             for (i32 i = 0; i < BUF_SIZE; i++) array_push(&arr, i + 1);
 
             EXPECT_EQ(arr.count, BUF_SIZE, "%d");
-            for (i32 i = 0; i < arr.count; i++) {
-                EXPECT_EQ(arr.items[i], i + 1, "%d");
-            }
+            ARRAY_FOREACH(arr, i, i32 item,
+                          { EXPECT_EQ(item, i + 1, I32_FMT); })
         });
 
         IT_FAIL("should respect the array's capacity if using an arena", {
@@ -61,9 +60,8 @@ TEST_MAIN({
             array_append(&arr, buf, BUF_SIZE);
 
             EXPECT_EQ(arr.count, BUF_SIZE, "%d");
-            for (i32 i = 0; i < arr.count; i++) {
-                EXPECT_EQ(arr.items[i], buf[i], "%d");
-            }
+            ARRAY_FOREACH(arr, i, i32 value,
+                          { EXPECT_EQ(value, buf[i], "%d"); });
         });
 
         IT_FAIL("should respect the array's capacity if using an arena", {
@@ -95,9 +93,8 @@ TEST_MAIN({
             array_append_other(&arr, other);
 
             EXPECT_EQ(arr.count, BUF_SIZE, "%d");
-            for (i32 i = 0; i < arr.count; i++) {
-                EXPECT_EQ(arr.items[i], other.items[i], "%d");
-            }
+            ARRAY_FOREACH(arr, i, i32 item,
+                          { EXPECT_EQ(item, other.items[i], "%d"); });
         });
 
         IT_FAIL("should respect the array's capacity if using an arena", {

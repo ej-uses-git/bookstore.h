@@ -6,6 +6,12 @@
 
 #include "./arena.h"
 
+#define ARRAY_FOREACH(arr, i, T_item, block)                                   \
+    for (i32 i = 0; i < (arr).count; i++) {                                    \
+        T_item = (arr).items[i];                                               \
+        do block while (0);                                                    \
+    }
+
 // Define the necessary fields for a dynamic array of type `T`.
 // Should be placed in a `struct` definition.
 #define ARRAY_FIELDS(T)                                                        \
