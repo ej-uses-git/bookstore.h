@@ -38,11 +38,17 @@
      */                                                                        \
     name prefix##_from_parts(const T *parts, i32 count);                       \
     /*                                                                         \
-     * Copy a slice.                                                           \
+     * Create a shallow copy of a slice.                                       \
      *                                                                         \
      * Does not copy the underlying data, only the pointer and the count.      \
      */                                                                        \
     name prefix##_copy(name self);                                             \
+    /*                                                                         \
+     * Create a deep copy of a slice, reallocating the underlying data.        \
+     *                                                                         \
+     * Does not copy the underlying data, only the pointer and the count.      \
+     */                                                                        \
+    name prefix##_clone(Arena *arena, name self);                              \
     /*                                                                         \
      * Get the item at index `i` from the slice `self`, as a value.            \
      *                                                                         \
@@ -197,6 +203,10 @@
     }                                                                          \
     name prefix##_copy(name self) {                                            \
         return prefix##_from_parts(self.data, self.count);                     \
+    }                                                                          \
+    name prefix##_clone(Arena *arena, name self) {                             \
+        T *data = (T *)arena_alloc(arena, self.count * sizeof(T));             \
+        return prefix##_from_parts(data, self.count);                          \
     }                                                                          \
     T prefix##_get(name self, i32 i) {                                         \
         if (i < 0) i = self.count + i;                                         \
