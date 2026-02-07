@@ -182,7 +182,7 @@ bool list_directory_command(Arena *arena, Args args) {
     }
 
     Lifetime lt = lifetime_begin(arena);
-    bool result = WALK_DIRECTORY(lt.arena, sv_to_cstr(arena, *directory),
+    bool result = DIRECTORY_WALK(lt.arena, sv_to_cstr(arena, *directory),
                                  list_directory_visit);
     lifetime_end(lt);
     printf("\n");
