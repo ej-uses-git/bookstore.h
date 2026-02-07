@@ -202,6 +202,136 @@ typedef uint64_t u64;
 // printf(U64_FMT, n);
 #define U64_FMT "%" PRIu64
 
+// @macro_function BITSET_SET
+//
+// @argument bset
+// @argument n
+// @returns `bset` but with the `n`th bit set to 1
+//
+// @description
+// Set the `n`th bit in a bitset.
+//
+// @example
+// BITSET_SET(0b00, 1); // 0b10
+// BITSET_SET(0b10, 3); // 0b1010
+#define BITSET_SET(bset, n) ((bset) | (1 << n))
+// @macro_function BITSET_TOGGLE
+//
+// @argument bset
+// @argument n
+// @returns `bset` but with the `n`th bit toggled
+//
+// @description
+// Toggle the `n`th bit in a bitset, setting it to 0 if it's 1 and 1 if it's 0.
+//
+// @example
+// BITSET_TOGGLE(0b00, 1); // 0b10
+// BITSET_TOGGLE(0b10, 1); // 0b00
+#define BITSET_TOGGLE(bset, n) ((bset) ^ (1 << n))
+// @macro_function BITSET_GET
+//
+// @argument bset
+// @argument n
+// @returns Whether the `n`th bit of `bset` is set to 1
+//
+// @description
+// Get the `n`th bit of a bitset.
+//
+// @example
+// BITSET_GET(0b10, 1); // true
+// BITSET_SET(0b10, 0); // false
+#define BITSET_GET(bset, n) (((bset) & (1 << n)) != 0)
+// @macro_function BITSET_ALL
+//
+// @argument n How many bits should be set to 1
+// @returns A bitset with the `n` first bits set to 1
+//
+// @description
+// Get a bitset with the first `n` bits set to 1.
+//
+// @example
+// BITSET_ALL(4); // 0b1111
+// BITSET_ALL(8); // 0b11111111
+#define BITSET_ALL(n) ((1 << n) - 1)
+// @macro BITSET8_FMT
+//
+// @description
+// Used with [BITSET8_ARG] to print an 8-bit bitset in \
+// `printf`-style formatting.
+//
+// @example
+// u8 n = 0b1010;
+// printf("0b" BITSET8_FMT, BITSET8_ARG(n)); // 0b1010
+#define BITSET8_FMT "%d%d%d%d%d%d%d%d"
+// @macro_function BITSET8_ARG
+//
+// @argument bset
+//
+// @description
+// Used with [BITSET8_FMT] to print an 8-bit bitset in \
+// `printf`-style formatting.
+//
+// @example
+// u8 n = 0b1010;
+// printf("0b" BITSET8_FMT, BITSET8_ARG(n)); // 0b1010
+#define BITSET8_ARG(bset)                                                      \
+    BITSET_GET(bset, 7), BITSET_GET(bset, 6), BITSET_GET(bset, 5),             \
+        BITSET_GET(bset, 4), BITSET_GET(bset, 3), BITSET_GET(bset, 2),         \
+        BITSET_GET(bset, 1), BITSET_GET(bset, 0)
+// @macro BITSET16_FMT
+//
+// @description
+// Used with [BITSET16_ARG] to print a 16-bit bitset in \
+// `printf`-style formatting.
+//
+// @example
+// u16 n = 0b1010;
+// printf("0b" BITSET16_FMT, BITSET16_ARG(n)); // 0b1010
+#define BITSET16_FMT BITSET8_FMT BITSET8_FMT
+// @macro_function BITSET16_ARG
+//
+// @argument bset
+//
+// @description
+// Used with [BITSET16_FMT] to print a 16-bit bitset in \
+// `printf`-style formatting.
+//
+// @example
+// u16 n = 0b1010;
+// printf("0b" BITSET16_FMT, BITSET16_ARG(n)); // 0b1010
+#define BITSET16_ARG(bset)                                                     \
+    BITSET_GET(bset, 15), BITSET_GET(bset, 14), BITSET_GET(bset, 13),          \
+        BITSET_GET(bset, 12), BITSET_GET(bset, 11), BITSET_GET(bset, 10),      \
+        BITSET_GET(bset, 9), BITSET_GET(bset, 8), BITSET8_ARG(bset)
+// @macro BITSET32_FMT
+//
+// @description
+// Used with [BITSET32_ARG] to print a 32-bit bitset in \
+// `printf`-style formatting.
+//
+// @example
+// u32 n = 0b1010;
+// printf("0b" BITSET32_FMT, BITSET32_ARG(n)); // 0b1010
+#define BITSET32_FMT BITSET16_FMT BITSET16_FMT
+// @macro_function BITSET32_ARG
+//
+// @argument bset
+//
+// @description
+// Used with [BITSET32_FMT] to print a 32-bit bitset in \
+// `printf`-style formatting.
+//
+// @example
+// u32 n = 0b1010;
+// printf("0b" BITSET32_FMT, BITSET32_ARG(n)); // 0b1010
+#define BITSET32_ARG(bset)                                                     \
+    BITSET_GET(bset, 31), BITSET_GET(bset, 30), BITSET_GET(bset, 29),          \
+        BITSET_GET(bset, 28), BITSET_GET(bset, 27), BITSET_GET(bset, 26),      \
+        BITSET_GET(bset, 25), BITSET_GET(bset, 24), BITSET_GET(bset, 23),      \
+        BITSET_GET(bset, 22), BITSET_GET(bset, 21), BITSET_GET(bset, 20),      \
+        BITSET_GET(bset, 19), BITSET_GET(bset, 18), BITSET_GET(bset, 17),      \
+        BITSET_GET(bset, 16), BITSET16_ARG(bset)
+
 // @macro_function KiB
 // @argument n
 // @returns `n` kilobytes
