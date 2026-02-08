@@ -159,6 +159,9 @@ ARRAY_DECLARE_PREFIX(char, StringBuilder, sb);
 #define SB_ARG(sb) (int)(sb).count, (sb).items
 // Format `fmt` like `printf`, appending the result to `self` and returning the
 // amount of characters appended.
+i32 sb_vappendf(StringBuilder *self, const char *fmt, va_list args);
+// Format `fmt` like `printf`, appending the result to `self` and returning the
+// amount of characters appended.
 i32 sb_appendf(StringBuilder *self, const char *fmt, ...) PRINTF_FORMAT(2, 3);
 // Push the NUL-terminating character (`'\0'`) to the end of `self`, allowing
 // its underlying `items` to be used as a C-string.
@@ -330,6 +333,28 @@ STRING__SV_PARSE_FLOAT_DEFINE(float, strtof)
 STRING__SV_PARSE_FLOAT_DEFINE(double, strtod)
 
 ARRAY_DEFINE_PREFIX(char, StringBuilder, sb)
+
+i32 sb_vappendf(StringBuilder *self, const char *fmt, va_list args) {
+    va_list list;
+
+    va_copy(list, args);
+    i32 n = vsnprintf(NULL, 0, fmt, list);
+    va_end(list);
+
+    // NOTE: the new_capacity needs to be +1 because of the null terminator.
+    // However, further below we increase self->count by n, not n + 1.
+    // This is because we don't want the `StringBuilder` to include the null
+    // terminator. The user can always use `sb_push_null` if they want it.
+    sb_reserve(self, n);
+    char *dest = self->items + self->count;
+    va_copy(list, args);
+    vsnprintf(dest, n + 1, fmt, list);
+    va_end(list);
+
+    self->count += n;
+
+    return n;
+}
 
 i32 sb_appendf(StringBuilder *self, const char *fmt, ...) {
     va_list args;
