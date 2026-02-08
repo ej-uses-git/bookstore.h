@@ -6,6 +6,9 @@
 
 #include "./basic.h"
 
+// @type Arena
+//
+// @description
 // An arena allocator, which can be used to allocate and free memory in blocks.
 typedef struct {
     // The amount of memory which can be allocated in this arena, in bytes.
@@ -14,29 +17,72 @@ typedef struct {
     i32 allocated;
 } Arena;
 
-// Get the pointer to the arena's memory.
+// @macro_function ARENA_MEMORY
+//
+// @argument arena
+// @returns The pointer to the arena's memory
 #define ARENA_MEMORY(arena) (i8 *)((arena) + 1)
 
+// @function arena_new
+//
+// @argument capacity The amount of bytes which can be allocated from the arena.
+// @returns A pointer to the arena allocator.
+//
+// @description
 // Create a new arena with `capacity` bytes, using `MALLOC`.
 Arena *arena_new(i32 capacity);
+// @function arena_destroy
+//
+// @argument arena The arena to destroy
+//
+// @description
 // Destroy an arena, using `FREE`.
 void arena_destroy(Arena *self);
+// @function arena_alloc
+//
+// @argument self The arena to allocate the memory from
+// @argument size The amount of bytes to allocate
+// @returns A pointer to the allocated memory
+//
+// @description
 // Allocate `size` bytes of memory using an arena allocator.
 void *arena_alloc(Arena *self, i32 size);
+// @function arena_clear
+//
+// @argument self The arena to clear.
+//
+// @description
 // Clear an arena, freeing the capacity such that more memory can be allocated.
 // Note: every `arena_alloc` onwards will overwrite previously allocated memory.
 void arena_clear(Arena *self);
-// Clone a C-string (NUL-terminated list of characters), using the arena to
+// @function arena_clone_cstr
+//
+// @argument arena The arena to allocate the memory for the clone from
+// @argument cstr The C-string to clone
+//
+// @description
+// Clone a C-string (NUL-terminated list of characters), using the arena to \
 // allocate the underlying memory.
 char *arena_clone_cstr(Arena *self, const char *cstr);
-// Format `fmt` like `printf`, returning a C-string (NUL-terminated list of
-// characters) with the result. Uses the arena to allocate the underlying
+// @function arena_sprintf
+//
+// @argument self The arena to allocate the string's memory from
+// @argument fmt The `printf` format string to use
+// @argument ...rest The `printf` formatting arguments to use
+// @returns A pointer to a C-string with the formatted data
+//
+// @description
+// Format `fmt` like `printf`, returning a C-string (NUL-terminated list of \
+// characters) with the result. Uses the arena to allocate the underlying \
 // memory.
-char *arena_sprintf(Arena *arena, const char *fmt, ...) PRINTF_FORMAT(2, 3);
+char *arena_sprintf(Arena *self, const char *fmt, ...) PRINTF_FORMAT(2, 3);
 
-// A temporary lifetime, associated with an arena allocator, which provides the
-// ability to allocate memory for a temporary while and then reset the arena
-// back to the state it was at the beginning of the lifetime.
+// @type Lifetime
+//
+// @description
+// A temporary lifetime, associated with an arena allocator, which provides \
+// the ability to allocate memory for a temporary while and then reset the \
+// arena back to the state it was at the beginning of the lifetime.
 typedef struct {
     // The arena allocator associated with this lifetime.
     Arena *arena;
@@ -45,10 +91,31 @@ typedef struct {
     i32 start;
 } Lifetime;
 
+// @function lifetime_begin
+//
+// @argument arena The arena to create a lifetime from
+// @returns A `Lifetime` for temporary allocations.
+//
+// @description
 // Create a lifetime from an arena allocator.
+//
+// @example
+// Lifetime lt = lifetime_begin(arena);
+// (void)arena_alloc(lt.arena, MiB(1));
+// lifetime_end(lt);
 Lifetime lifetime_begin(Arena *arena);
-// End a lifetime, freeing the capacity of the associated arena back to the
+// @function lifetime_end
+//
+// @argument self The `Lifetime` to end
+//
+// @description
+// End a lifetime, freeing the capacity of the associated arena back to the \
 // state it was in when the lifetime began.
+//
+// @example
+// Lifetime lt = lifetime_begin(arena);
+// (void)arena_alloc(lt.arena, MiB(1));
+// lifetime_end(lt);
 void lifetime_end(Lifetime self);
 
 #ifdef BOOKSTORE_IMPLEMENTATION
